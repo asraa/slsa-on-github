@@ -66,7 +66,7 @@ func GetCurrentWorkflowRunAndBuildJob(ctx context.Context, client *github.Client
 	}
 
 	if !strings.EqualFold(*job.Jobs[0].Name, "build") {
-		fmt.Printf("expected build name, got  %s\n", job.Jobs[0].Name)
+		fmt.Printf("expected build name, got  %s\n", job.Jobs[0].GetName()s)
 		return nil, nil, nil, errors.New("unexpected build name")
 	}
 

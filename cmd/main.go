@@ -34,9 +34,9 @@ func main() {
 	repo := z[1]
 
 	// make github client
-	token, ok := os.LookupEnv("GITHUB_AUTH_TOKEN")
+	token, ok := os.LookupEnv("GITHUB_TOKEN")
 	if !ok {
-		fmt.Printf("%s", "missing GITHUB_AUTH_TOKEN")
+		fmt.Printf("%s", "missing GITHUB_TOKEN")
 	}
 	ctx := context.Background()
 	// Requires a token with repo scope
