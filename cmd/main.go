@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -17,11 +18,23 @@ import (
 func main() {
 	// get org and repo flags
 	repoStr := flag.String("repository", "", "owner and repository to fetch build logs, e.g. ossf/scorecard")
+	digestStr := flag.String("digest", "", "sha256 digest of the input binary being produced")
 	flag.Parse()
 
 	if *repoStr == "" {
 		flag.Usage()
 		return
+	}
+
+	if *digestStr == "" {
+		flag.Usage()
+		return
+	}
+
+	digest := *digestStr
+	if _, err := hex.DecodeString(digest); err != nil && len(digest) != 64 {
+		fmt.Fprintln(os.Stderr, "sha256 digest is not valid")
+		os.Exit(1)
 	}
 
 	// split string
@@ -51,7 +64,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	att, err := provenance.GenerateAttestation(workflow, run, job)
+	att, err := provenance.GenerateAttestation(workflow, run, job, digest)
 	if err != nil {
 		log.Fatal(err)
 	}
