@@ -25,14 +25,20 @@ import (
 // GenerateAttestation translates workflow run logs into a SLSA provenance
 // attestation.
 // Spec: https://slsa.dev/provenance/v0.1
-func GenerateAttestation(workflow *github.Workflow, workflowRun *github.WorkflowRun, job *github.WorkflowJob) (intoto.ProvenanceStatement, error) {
+func GenerateAttestation(workflow *github.Workflow, workflowRun *github.WorkflowRun, job *github.WorkflowJob, digest string) (intoto.ProvenanceStatement, error) {
 	// Only the Job has information on the runners used for the build job in the run.
-	// TODO: Generate subject digests
 	att := intoto.ProvenanceStatement{
 		StatementHeader: intoto.StatementHeader{
 			Type:          intoto.StatementInTotoV01,
 			PredicateType: slsa.PredicateSLSAProvenance,
-			// TODO Subject
+			Subject: []intoto.Subject{
+				{
+					Name: "_",
+					Digest: slsa.DigestSet{
+						"sha256": digest,
+					},
+				},
+			},
 		},
 		Predicate: slsa.ProvenancePredicate{
 			BuildType: "https://github.com/Attestations/GitHubActionsWorkflow@v1",
