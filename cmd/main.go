@@ -17,23 +17,20 @@ import (
 )
 
 func main() {
-	// get org and repo flags
-	repoStr := flag.String("repository", "", "owner and repository to fetch build logs, e.g. ossf/scorecard")
-	digestStr := flag.String("digest", "", "sha256 digest of the input binary being produced")
-	flag.Parse()
-
-	if *repoStr == "" {
-		flag.Usage()
-		return
+	// Check for org and repo env variables
+	repository, ok := os.LookupEnv("INPUT_REPOSITORY")
+	if !ok {
+		fmt.Fprintln(os.Stderr, "Environment variable INPUT_REPOSITORY not present")
+		os.Exit(1)
 	}
-
-	if *digestStr == "" {
-		flag.Usage()
-		return
+	digest, ok := os.LookupEnv("INPUT_DIGEST")
+	if !ok {
+		fmt.Fprintln(os.Stderr, "Environment variable INPUT_DIGEST not present")
+		os.Exit(1)
 	}
 
 	// Check for GITHUB env variables
-	ghRunIdStr, ok := os.LookupEnv("GITHUB_RUN_ID")
+	ghRunIdStr, ok := os.LookupEnv("INPUT_GITHUB_RUN_ID")
 	if !ok {
 		fmt.Fprintln(os.Stderr, "Environment variable GITHUB_RUN_ID not present")
 		os.Exit(1)
@@ -45,14 +42,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	digest := *digestStr
 	if _, err := hex.DecodeString(digest); err != nil && len(digest) != 64 {
 		fmt.Fprintln(os.Stderr, "sha256 digest is not valid")
 		os.Exit(1)
 	}
 
 	// split string
-	z := strings.SplitN(*repoStr, "/", 2)
+	z := strings.SplitN(repository, "/", 2)
 	if z == nil || len(z) != 2 {
 		flag.Usage()
 		return
@@ -86,5 +82,5 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(string(attBytes))
+	fmt.Println(fmt.Sprintf(`::set-output name=provenance::%s`, string(attBytes)))
 }

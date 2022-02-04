@@ -1,0 +1,18 @@
+name: "Provenance generator"
+description: "Generate provenance for a build in GitHub Actions"
+inputs:
+  repository:
+    description: "Owner and repository where the build took place"
+    required: true
+  digest:
+    description: "SHA256 digest of the binary built"
+    required: true
+  githubRunId:
+    description: "GITHUB_RUN_ID"
+    required: true
+outputs:
+  provenance:
+    description: "The JSON string of the provenance produced"
+runs:
+  using: "docker"
+  image: "Dockerfile"
