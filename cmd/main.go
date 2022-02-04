@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/asraa/slsa-on-github/pkg/provenance"
@@ -29,6 +30,19 @@ func main() {
 	if *digestStr == "" {
 		flag.Usage()
 		return
+	}
+
+	// Check for GITHUB env variables
+	ghRunIdStr, ok := os.LookupEnv("GITHUB_RUN_ID")
+	if !ok {
+		fmt.Fprintln(os.Stderr, "Environment variable GITHUB_RUN_ID not present")
+		os.Exit(1)
+	}
+
+	ghRunId, err := strconv.ParseInt(ghRunIdStr, 10, 64)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Invalid github run ID string: %v", err)
+		os.Exit(1)
 	}
 
 	digest := *digestStr
@@ -59,7 +73,7 @@ func main() {
 	tc := oauth2.NewClient(ctx, ts)
 	client := github.NewClient(tc)
 
-	workflow, run, job, err := provenance.GetCurrentWorkflowRunAndBuildJob(ctx, client, org, repo)
+	workflow, run, job, err := provenance.GetCurrentWorkflowRunAndBuildJob(ctx, client, org, repo, ghRunId)
 	if err != nil {
 		log.Fatal(err)
 	}

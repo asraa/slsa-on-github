@@ -31,46 +31,40 @@ import (
 	"github.com/google/go-github/v40/github"
 )
 
-func GetCurrentWorkflowRunAndBuildJob(ctx context.Context, client *github.Client, org, repo string) (*github.Workflow, *github.WorkflowRun, *github.WorkflowJob, error) {
-	runs, resp, err := client.Actions.ListRepositoryWorkflowRuns(ctx, org, repo, &github.ListWorkflowRunsOptions{})
+func GetCurrentWorkflowRunAndBuildJob(ctx context.Context, client *github.Client, org string, repo string, runId int64) (*github.Workflow, *github.WorkflowRun, *github.WorkflowJob, error) {
+	workflowRun, resp, err := client.Actions.GetWorkflowRunByID(ctx, org, repo, runId)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 	if resp.StatusCode != http.StatusOK {
-		fmt.Printf("returned status workflow runs %s\n", resp.Status)
+		fmt.Printf("returned status GetWorkflowRun %s\n", resp.Status)
 		return nil, nil, nil, err
 	}
 
-	workflow_run_id := runs.WorkflowRuns[0].ID
-
-	if *runs.WorkflowRuns[0].Name != "SLSA Release" {
-		fmt.Printf("name is actually %s", *runs.WorkflowRuns[0].Name)
-	}
-
-	workflow, resp, err := client.Actions.GetWorkflowByID(ctx, org, repo, *runs.WorkflowRuns[0].WorkflowID)
+	workflow, resp, err := client.Actions.GetWorkflowByID(ctx, org, repo, *workflowRun.WorkflowID)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 	if resp.StatusCode != http.StatusOK {
-		fmt.Printf("returned status workflow runs %s\n", resp.Status)
+		fmt.Printf("returned status GetWorkflow %s\n", resp.Status)
 		return nil, nil, nil, err
 	}
 
-	job, resp, err := client.Actions.ListWorkflowJobs(ctx, org, repo, *workflow_run_id, &github.ListWorkflowJobsOptions{})
+	jobs, resp, err := client.Actions.ListWorkflowJobs(ctx, org, repo, runId, &github.ListWorkflowJobsOptions{})
 	if err != nil {
 		return nil, nil, nil, err
 	}
 	if resp.StatusCode != http.StatusOK {
-		fmt.Printf("returned status  workflow job %s\n", resp.Status)
+		fmt.Printf("returned status ListWorkflowJobs %s\n", resp.Status)
 		return nil, nil, nil, err
 	}
 
-	if !strings.EqualFold(*job.Jobs[0].Name, "build") {
-		fmt.Printf("expected build name, got  %s\n", job.Jobs[0].GetName())
-		return nil, nil, nil, errors.New("unexpected build name")
+	for _, v := range jobs.Jobs {
+		if strings.EqualFold(*v.Name, "build") {
+			return workflow, workflowRun, v, nil
+		}
 	}
-
-	return workflow, runs.WorkflowRuns[0], job.Jobs[0], nil
+	return nil, nil, nil, errors.New("could not find job with name 'build'")
 }
 
 func GetBuildLogsURL(ctx context.Context, client *github.Client, org, repo string) (*url.URL, error) {
