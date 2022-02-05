@@ -55,7 +55,7 @@ runs:
     - name: Build project
       shell: bash
       run: |
-        go build
+        go build -o SLSA_BINARY
 
     #TODO(upload): verify how the action handles malicious names.
     - name: Upload the artifact
