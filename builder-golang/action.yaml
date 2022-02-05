@@ -41,8 +41,8 @@ runs:
     #     to-state: enabled
 
     - name: Download dependencies
-    - run: |
-      go get -v -d
+      run: |
+        go get -v -d
 
     # TODO(hermeticity)
     # - name: Disable hermeticity
