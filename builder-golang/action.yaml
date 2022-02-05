@@ -1,6 +1,6 @@
 name: "SLSA builder for golang"
 description: "Build a binary for a golang project"
-author: "TODO"
+author: "GOSST Team"
 
 # Documentation: https://docs.github.com/en/actions/creating-actions/metadata-syntax-for-github-actions.
 
