@@ -35,7 +35,7 @@ runs:
         go-version: $INPUT_GO_VERSION
     
     # TODO(hermeticity)
-    - name: Enable hermeticity
+    # - name: Enable hermeticity
     # uses: slsa/hermeticity@xxx
     #   with:
     #     to-state: enabled
@@ -45,7 +45,7 @@ runs:
       go get -v -d
 
     # TODO(hermeticity)
-    - name: Disable hermeticity
+    # - name: Disable hermeticity
     # uses: slsa/hermeticity@xxx
     #   with:
     #     to-state: disabled
