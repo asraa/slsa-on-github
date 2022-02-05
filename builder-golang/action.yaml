@@ -1,0 +1,63 @@
+name: "SLSA builder for golang"
+description: "Build a binary for a golang project"
+author: "TODO"
+
+# Documentation: https://docs.github.com/en/actions/creating-actions/metadata-syntax-for-github-actions.
+
+inputs:
+  # TODO(setup-go): support more arguments
+  # from https://github.com/actions/setup-go/?
+  go-version:
+    description: "INPUT: Go version to use"
+    required: false
+
+  binary:
+    description: "OUTPUT: The generated binary path"
+    required: true
+
+  repo-token:
+    description: "INPUT: GitHub token with read access"
+    required: false
+    default: ${{ github.token }}
+
+#TODO(img)
+branding:
+  icon: "mic"
+  color: "white"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout the repository
+      uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 # v2.3.4
+      with:
+        fetch-depth: 0
+    
+    - name: Set up golang environment
+      uses: actions/setup-go@424fc82d43fa5a37540bae62709ddcc23d9520d4 # v2.1.3
+
+    # TODO(hermeticity)
+    - name: Enable hermeticity
+    # uses: slsa/hermeticity@xxx
+    #   with:
+    #     to-state: enabled
+
+    - name: Download dependencies
+    - run: |
+      go get -v -d
+
+    # Build the project.
+    - name: Build project
+      env:
+        OUT: $INPUT_BINARY
+      run: |
+        go build -o "$OUT"
+    
+    - name: Upload the artifact
+      env:
+        OUT: $INPUT_BINARY
+      uses: actions/upload-artifact@v82c141cc518b40d92cc801eee768e7aafc9c2fa2 # v2.3.1
+        with:
+          name: compiled golang binary
+          path: "$OUT"
+          retention-days: 5
