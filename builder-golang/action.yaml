@@ -46,7 +46,12 @@ runs:
     - run: |
       go get -v -d
 
-    # Build the project.
+    # TODO(hermeticity)
+    - name: Disable hermeticity
+    # uses: slsa/hermeticity@xxx
+    #   with:
+    #     to-state: disabled
+
     - name: Build project
       env:
         OUT: $INPUT_BINARY
