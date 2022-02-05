@@ -65,6 +65,6 @@ runs:
         OUT: $INPUT_BINARY
       uses: actions/upload-artifact@v82c141cc518b40d92cc801eee768e7aafc9c2fa2 # v2.3.1
         with:
-          name: compiled golang binary
+          name: SLSA_BINARY
           path: "$OUT"
           retention-days: 5
