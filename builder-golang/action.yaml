@@ -41,6 +41,7 @@ runs:
     #     to-state: enabled
 
     - name: Download dependencies
+      shell: bash
       run: |
         go get -v -d
 
@@ -51,6 +52,7 @@ runs:
     #     to-state: disabled
 
     - name: Build project
+      shell: bash
       run: |
         go build
     
