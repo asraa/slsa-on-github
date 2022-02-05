@@ -55,11 +55,11 @@ runs:
       shell: bash
       run: |
         go build
-    
+
     #TODO(upload): verify how the action handles malicious names.
     - name: Upload the artifact
       uses: actions/upload-artifact@v82c141cc518b40d92cc801eee768e7aafc9c2fa2 # v2.3.1
-        with:
-          name: SLSA_BINARY
-          path: $INPUT_OUTPUT_BINARY
-          retention-days: 5
+      with:
+        name: SLSA_BINARY
+        path: $INPUT_OUTPUT_BINARY
+        retention-days: 5
