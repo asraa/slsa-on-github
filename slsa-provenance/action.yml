@@ -1,0 +1,24 @@
+name: "Provenance generator"
+description: "Generate provenance for a binary in GitHub Actions"
+inputs:
+  binary:
+    description: "the path to the binary built"
+    required: true
+  github_token:
+    description: 'GitHub API Token'
+    required: true
+outputs:
+  provenance:
+    description: "The JSON string of the provenance produced"
+runs:
+  using: "composite"
+  steps:
+    - uses: 'actions/download-artifact@v2'
+      with:
+        name: binary
+    - name: Set env
+      run: echo "DIGEST=$(sha256sum binary | awk '{print $1}')""
+    - uses: './generator'
+      with:
+        digest: $DIGEST
+        token: ${{ inputs.github_token }}

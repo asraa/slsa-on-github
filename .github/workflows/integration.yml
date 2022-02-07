@@ -18,19 +18,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # Download build from previous job
-      - uses: 'actions/download-artifact@v2'
-        with:
-          name: main
-      - name: Set env
-        run: echo "DIGEST=$(sha256sum main | awk '{print $1}')""
       - uses: actions/checkout@main
       - name: Self test
         id: selftest
-        uses: asraa/slsa-on-github@main
+        uses: asraa/slsa-on-github/slsa-provenance@main
         with:
-          repository: ${{ github.repository }}
-          digest: $DIGEST
-          github_run_id: ${{ github.run_id }} 
+          binary: main
+          github_token: ${{ secrets.GITHUB_TOKEN }}
       - name: Check outputs and modified files
         run: |
           cat "${{ steps.selftest.outputs.provenance }}"
