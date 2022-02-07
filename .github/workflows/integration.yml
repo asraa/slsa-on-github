@@ -6,6 +6,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2.4.0
+        with:
+          path: slsa-provenance/generator
       - uses: actions/setup-go@v2
       - name: build
         run: go build -o main ./cmd/
