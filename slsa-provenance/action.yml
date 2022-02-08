@@ -21,7 +21,7 @@ runs:
       shell: bash
     # Checkout for local action
     - uses: actions/checkout@v2.4.0
-    - uses: './generator'
+    - uses: './slsa-provenance/generator'
       with:
         digest: $DIGEST
         token: ${{ inputs.github_token }}
