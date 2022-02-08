@@ -8,8 +8,14 @@ on:
       go-version:
         required: true
         type: string
-    # Map the workflow outputs to job outputs
+      working-dir:
+        required: false
+        type: string
     outputs:
+      go-binary-name:
+        description: "The name of the generated binary uploaded to the artifact registry"
+        value: ${{ jobs.provenance.outputs.go-binary-name }}
+
       firstword:
         description: "The first output string"
         value: ${{ jobs.example_job.outputs.output1 }}
@@ -61,10 +67,34 @@ jobs:
           name: SLSA_BINARY
           path: SLSA_BINARY
           retention-days: 5
-      # - uses: ./.github/actions/build-go
-      #   with:
-      #     go-version: ${{ inputs.go-version }}
 
+  provenance:
+    permissions:
+      id-token: write
+      packages: write
+      contents: read
+
+    name: provenance
+    runs-on: ubuntu-latest
+    needs: build
+    outputs:
+      go-binary-name: ${{ steps.cosignid.outputs.go-binary-name }}
+    
+    # runs-on: ubuntu-latest
+    #   - uses: ./.github/actions/build-go
+    #     with:
+    #       go-version: ${{ inputs.go-version }}
+    
+    steps:
+        # Sign binary and provenance and upload to Container registry.
+      #- uses: sigstore/cosign-installer@main
+      - name: Upload binary as blob and sign with provenance
+        id: cosignid
+        env:
+          COSIGN_EXPERIMENTAL: "true"
+        run: |
+          
+          echo "::set-output name=go-binary-name::SLSA_BINARY"
   example_job:
     name: Generate output
     runs-on: ubuntu-latest
