@@ -102,7 +102,7 @@ jobs:
         run: |
           echo expected hash is $DIGEST
           export GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
-          ./prov -repository ${{ github.repository }} -digest $DIGEST > att.provenance
+          echo ./prov -repository ${{ github.repository }} -digest $DIGEST > att.provenance
           ls
       
       - name: Log in to the GitHub Container registry
@@ -119,9 +119,9 @@ jobs:
         env:
           COSIGN_EXPERIMENTAL: "true"
         run: |
-          cosign upload blob -f ${{ env.GENERATED_BINARY }} ghcr.io/asraa/slsa-github-demo
-          cosign sign ghcr.io/asraa/slsa-github-demo
-          cosign attest --predicate att.provenance ghcr.io/asraa/slsa-github-demo
+          echo cosign upload blob -f ${{ env.GENERATED_BINARY }} ghcr.io/asraa/slsa-github-demo
+          echo cosign sign ghcr.io/asraa/slsa-github-demo
+          echo cosign attest --predicate att.provenance ghcr.io/asraa/slsa-github-demo
 
           
           
