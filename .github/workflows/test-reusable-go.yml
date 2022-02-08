@@ -2,6 +2,9 @@ name: Reusable workflow
 
 permissions: read-all
 
+env:
+  GENERATED_BINARY: generated-go-binary
+
 on:
   workflow_call:
     inputs:
@@ -14,17 +17,12 @@ on:
     outputs:
       go-binary-name:
         description: "The name of the generated binary uploaded to the artifact registry"
-        value: ${{ jobs.provenance.outputs.go-binary-name }}
-
-      firstword:
-        description: "The first output string"
-        value: ${{ jobs.example_job.outputs.output1 }}
-      secondword:
-        description: "The second output string"
-        value: ${{ jobs.example_job.outputs.output2 }}
+        value: ${{ jobs.build.outputs.go-binary-name }}
 
 jobs:
   build:
+    outputs:
+      go-binary-name: ${{ steps.build-gen.outputs.go-binary-name }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the repository
@@ -56,16 +54,19 @@ jobs:
       #     to-state: disabled
 
       - name: Build project
+        id: build-gen
         shell: bash
         run: |
-          go build -o SLSA_BINARY
+          go build -o $GENERATED_BINARY
+          echo "::set-output name=go-binary-name::$GENERATED_BINARY"
+          echo "::set-output name=go-binary-sha256::some-hash"
 
       #TODO(upload): verify how the action handles malicious names.
       - name: Upload the artifact
         uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 # v2.3.1
         with:
-          name: SLSA_BINARY
-          path: SLSA_BINARY
+          name: $GENERATED_BINARY
+          path: $GENERATED_BINARY
           retention-days: 5
 
   provenance:
@@ -77,33 +78,45 @@ jobs:
     name: provenance
     runs-on: ubuntu-latest
     needs: build
-    outputs:
-      go-binary-name: ${{ steps.cosignid.outputs.go-binary-name }}
-    
-    # runs-on: ubuntu-latest
-    #   - uses: ./.github/actions/build-go
-    #     with:
-    #       go-version: ${{ inputs.go-version }}
-    
-    steps:
-        # Sign binary and provenance and upload to Container registry.
-      #- uses: sigstore/cosign-installer@main
+    steps:    
+      - uses: actions/checkout@v2.4.0
+        with:
+          repository: 'asraa/slsa-on-github'
+      - uses: actions/setup-go@v2
+      - name: build provenance generator
+        run: go build -o prov ./cmd/main.go
+
+      # Download build from previous job
+      - uses: 'actions/download-artifact@v2'
+        with:
+          name: $GENERATED_BINARY
+
+      - name: Generate provenance for build in previous job
+        run: |
+          echo expected hash is ${{ needs.build.outputs.go-binary-sha256 }}
+          export GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
+          export DIGEST=$(sha256sum $GENERATED_BINARY | awk '{print $1}')
+          ./prov -repository ${{ github.repository }} -digest $DIGEST > att.provenance
+          ls
+      
+      - name: Log in to the GitHub Container registry
+        uses: docker/login-action@f054a8b539a109f9f41c372932f1ae047eff08c9
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # sign binary and provenance and upload to Container registry
+      - uses: sigstore/cosign-installer@main
       - name: Upload binary as blob and sign with provenance
         id: cosignid
         env:
           COSIGN_EXPERIMENTAL: "true"
         run: |
+          cosign upload blob -f $GENERATED_BINARY ghcr.io/asraa/slsa-github-demo
+          cosign sign ghcr.io/asraa/slsa-github-demo
+          cosign attest --predicate att.provenance ghcr.io/asraa/slsa-github-demo
+
           
-          echo "::set-output name=go-binary-name::SLSA_BINARY"
-  example_job:
-    name: Generate output
-    runs-on: ubuntu-latest
-    # Map the job outputs to step outputs
-    outputs:
-      output1: ${{ steps.step1.outputs.firstword }}
-      output2: ${{ steps.step2.outputs.secondword }}
-    steps:
-      - id: step1
-        run: echo "::set-output name=firstword::hello"
-      - id: step2
-        run: echo "::set-output name=secondword::world"
+          
+          
