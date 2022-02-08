@@ -4,6 +4,10 @@ permissions: read-all
 
 on:
   workflow_call:
+    inputs:
+      go-version:
+        required: true
+        type: string
     # Map the workflow outputs to job outputs
     outputs:
       firstword:
