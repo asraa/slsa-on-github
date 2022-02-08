@@ -6,21 +6,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2.4.0
-        with:
-          path: slsa-provenance/generator
       - uses: actions/setup-go@v2
       - name: build
+        working-directory: slsa-provenance/generator
         run: go build -o main ./cmd/
       - name: Upload build
         uses: 'actions/upload-artifact@v2'
         with:
           name: main
-          path: main
+          path: ./slsa-provenance/generator/main
   provenance:
     runs-on: ubuntu-latest
     steps:
       # Download build from previous job
-      - uses: actions/checkout@main
+      - uses: actions/checkout@v2.4.0
       - name: Self test
         id: selftest
         uses: asraa/slsa-on-github/slsa-provenance@main

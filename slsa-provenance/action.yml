@@ -18,6 +18,7 @@ runs:
         name: binary
     - name: Set env
       run: echo "DIGEST=$(sha256sum binary | awk '{print $1}')""
+      shell: bash
     - uses: './generator'
       with:
         digest: $DIGEST

@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/asraa/slsa-on-github/pkg/provenance"
+	"github.com/asraa/slsa-on-github/slsa-provenance/generator/pkg/provenance"
 	"github.com/google/go-github/v40/github"
 	"golang.org/x/oauth2"
 )

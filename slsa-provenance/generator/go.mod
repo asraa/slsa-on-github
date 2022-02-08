@@ -1,4 +1,4 @@
-module github.com/asraa/slsa-on-github
+module github.com/asraa/slsa-on-github/slsa-provenance/generator
 
 go 1.16
 
