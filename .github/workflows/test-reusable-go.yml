@@ -18,6 +18,13 @@ on:
         value: ${{ jobs.example_job.outputs.output2 }}
 
 jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: ./.github/actions/build-go
+        with:
+          go-version: ${{ inputs.go-version }}
+
   example_job:
     name: Generate output
     runs-on: ubuntu-latest
