@@ -21,7 +21,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      steps:
       - name: Checkout the repository
         uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 # v2.3.4
         with:
