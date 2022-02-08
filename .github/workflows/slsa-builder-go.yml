@@ -1,6 +1,6 @@
 name: Reusable workflow
 
-permissions: read-all
+permissions:
 
 env:
   GENERATED_BINARY: generated-go-binary
