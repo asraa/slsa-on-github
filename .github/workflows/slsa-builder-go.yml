@@ -1,33 +1,33 @@
-# name: SLSA builder for golang
+name: SLSA builder for golang
 
-# permissions: read-all
+permissions: read-all
 
-# on:
-#   workflow_call:
-#     inputs:
-#       go-version:
-#         required: true
-#         type: string
-#       working-dir:
-#         required: false
-#         type: string
-#     outputs:
-#       go-binary-name:
-#         description: "The name of the generated binary uploaded to the artifact registry"
-#         value: ${{ jobs.provenance.outputs.go-binary-name }}
+on:
+  workflow_call:
+    inputs:
+      go-version:
+        required: true
+        type: string
+      # working-dir:
+      #   required: false
+      #   type: string
+    # outputs:
+    #   go-binary-name:
+    #     description: "The name of the generated binary uploaded to the artifact registry"
+    #     value: ${{ jobs.provenance.outputs.go-binary-name }}
 
  
-# jobs:
-#   # scorecard-provenance:
-#   #   name: scorecard provenance
-#   #   runs-on: ubuntu-latest
-#   build:
-#     runs-on: ubuntu-latest
-#     steps:
-#       - uses: ../../asraa/slsa-on-github/build-go
-#         with:
-#           go-version: ${{ inputs.go-version }}
-#           working-dir: ${{ inputs.working-dir }}
+jobs:
+  # scorecard-provenance:
+  #   name: scorecard provenance
+  #   runs-on: ubuntu-latest
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: ../../asraa/slsa-on-github/build-go
+        with:
+          go-version: ${{ inputs.go-version }}
+          #working-dir: ${{ inputs.working-dir }}
 
 #   provenance:
 #     permissions:
@@ -81,29 +81,29 @@
 #           cosign attest --predicate att.provenance ghcr.io/asraa/slsa-github-demo
 #           echo "::set-output name=go-binary-name::SLSA_BINARY"
 
-name: Reusable workflow
+# name: Reusable workflow
 
-on:
-  workflow_call:
-    # Map the workflow outputs to job outputs
-    outputs:
-      firstword:
-        description: "The first output string"
-        value: ${{ jobs.example_job.outputs.output1 }}
-      secondword:
-        description: "The second output string"
-        value: ${{ jobs.example_job.outputs.output2 }}
+# on:
+#   workflow_call:
+#     # Map the workflow outputs to job outputs
+#     outputs:
+#       firstword:
+#         description: "The first output string"
+#         value: ${{ jobs.example_job.outputs.output1 }}
+#       secondword:
+#         description: "The second output string"
+#         value: ${{ jobs.example_job.outputs.output2 }}
 
-jobs:
-  example_job:
-    name: Generate output
-    runs-on: ubuntu-latest
-    # Map the job outputs to step outputs
-    outputs:
-      output1: ${{ steps.step1.outputs.firstword }}
-      output2: ${{ steps.step2.outputs.secondword }}
-    steps:
-      - id: step1
-        run: echo "::set-output name=firstword::hello"
-      - id: step2
-        run: echo "::set-output name=secondword::world"
+# jobs:
+#   example_job:
+#     name: Generate output
+#     runs-on: ubuntu-latest
+#     # Map the job outputs to step outputs
+#     outputs:
+#       output1: ${{ steps.step1.outputs.firstword }}
+#       output2: ${{ steps.step2.outputs.secondword }}
+#     steps:
+#       - id: step1
+#         run: echo "::set-output name=firstword::hello"
+#       - id: step2
+#         run: echo "::set-output name=secondword::world"
