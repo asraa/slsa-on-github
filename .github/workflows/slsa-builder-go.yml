@@ -4,10 +4,10 @@ permissions: read-all
 
 on:
   workflow_call:
-    # inputs:
-    #   go-version:
-    #     required: true
-    #     type: string
+    inputs:
+      go-version:
+        required: true
+        type: string
       # working-dir:
       #   required: false
       #   type: string

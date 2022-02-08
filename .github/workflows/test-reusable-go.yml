@@ -1,5 +1,7 @@
 name: Reusable workflow
 
+permissions: read-all
+
 on:
   workflow_call:
     # Map the workflow outputs to job outputs
