@@ -1,6 +1,7 @@
-name: Reusable workflow
+name: SLSA go builder
 
 permissions:
+  contents: read
 
 env:
   GENERATED_BINARY: generated-go-binary
