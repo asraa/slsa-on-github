@@ -23,6 +23,10 @@ runs:
     # Checkout for local action
     - uses: actions/checkout@v2.4.0
     - uses: './slsa-provenance/generator'
+      id: provenance
       with:
         digest: ${{ env.digest }}
         token: ${{ inputs.github_token }}
+    - name: Set provenance output
+      run: | 
+        echo '::set-output name=provenance::"${{ steps.provenance.outputs.provenance }}"'
