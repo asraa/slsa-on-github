@@ -26,6 +26,7 @@ jobs:
   build:
     outputs:
       go-binary-sha256: ${{ steps.build-gen.outputs.go-binary-sha256 }}
+      go-binary-name: ${{ steps.build-gen.outputs.go-binary-name }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the repository
@@ -62,8 +63,8 @@ jobs:
         # TODO: change directory using working-dir.
         run: |
           go build -o ${{ env.GENERATED_BINARY }}
-          echo "::set-output name=go-binary-name::${{ env.GENERATED_BINARY }}"
           export DIGEST=$(sha256sum ${{ env.GENERATED_BINARY }} | awk '{print $1}')
+          echo "::set-output name=go-binary-name::${{ env.GENERATED_BINARY }}"
           echo "::set-output name=go-binary-sha256::$DIGEST"
 
       #TODO(upload): verify how the action handles malicious names.
