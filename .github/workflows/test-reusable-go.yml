@@ -4,6 +4,7 @@ permissions: read-all
 
 env:
   GENERATED_BINARY: generated-go-binary
+  #TODO: let caller upload ?
   REGISTRY: ghcr.io
 
 on:
