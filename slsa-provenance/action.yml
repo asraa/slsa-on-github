@@ -30,3 +30,4 @@ runs:
     - name: Set provenance output
       run: | 
         echo '::set-output name=provenance::"${{ steps.provenance.outputs.provenance }}"'
+      shell: bash
