@@ -4,14 +4,17 @@ permissions: read-all
 
 env:
   GENERATED_BINARY: generated-go-binary
+  REGISTRY: ghcr.io
 
 on:
   workflow_call:
     inputs:
       go-version:
+        description: "The go version to use"
         required: true
         type: string
       working-dir:
+        description: "Working directory to build the binary"
         required: false
         type: string
     outputs:
@@ -56,6 +59,7 @@ jobs:
       - name: Build project
         id: build-gen
         shell: bash
+        # TODO: change directory using working-dir.
         run: |
           go build -o ${{ env.GENERATED_BINARY }}
           echo "::set-output name=go-binary-name::${{ env.GENERATED_BINARY }}"
@@ -93,10 +97,12 @@ jobs:
           name: ${{ env.GENERATED_BINARY }}
 
       - name: Generate provenance for build in previous job
+        env:
+          DIGEST: ${{ needs.build.outputs.go-binary-sha256 }}
         run: |
-          echo expected hash is ${{ needs.build.outputs.go-binary-sha256 }}
+          echo expected hash is $DIGEST
           export GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
-          ./prov -repository ${{ github.repository }} -digest ${{ needs.build.outputs.go-binary-sha256 }} > att.provenance
+          ./prov -repository ${{ github.repository }} -digest $DIGEST > att.provenance
           ls
       
       - name: Log in to the GitHub Container registry
