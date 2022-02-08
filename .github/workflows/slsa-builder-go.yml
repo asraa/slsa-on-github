@@ -1,94 +1,109 @@
-name: SLSA builder for golang
+# name: SLSA builder for golang
 
-permissions: read-all
+# permissions: read-all
+
+# on:
+#   workflow_call:
+#     inputs:
+#       go-version:
+#         required: true
+#         type: string
+#       working-dir:
+#         required: false
+#         type: string
+#     outputs:
+#       go-binary-name:
+#         description: "The name of the generated binary uploaded to the artifact registry"
+#         value: ${{ jobs.provenance.outputs.go-binary-name }}
+
+ 
+# jobs:
+#   # scorecard-provenance:
+#   #   name: scorecard provenance
+#   #   runs-on: ubuntu-latest
+#   build:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - uses: ../../asraa/slsa-on-github/build-go
+#         with:
+#           go-version: ${{ inputs.go-version }}
+#           working-dir: ${{ inputs.working-dir }}
+
+#   provenance:
+#     permissions:
+#       id-token: write
+#       packages: write
+#       contents: read
+
+#     name: provenance
+#     outputs:
+#       go-binary-name: ${{ steps.cosignid.outputs.go-binary-name }}
+#     runs-on: ubuntu-latest
+#     # Requires build to complete
+#     needs: build
+#     steps:
+#       # TODO package all of this into an action
+#       - uses: actions/checkout@v2.4.0
+#         with:
+#           repository: 'asraa/slsa-on-github'
+#       - uses: actions/setup-go@v2
+#       - name: build provenance generator
+#         run: go build -o prov ./cmd/main.go
+
+#       # Download build from previous job
+#       - uses: 'actions/download-artifact@v2'
+#         with:
+#           name: SLSA_BINARY
+
+#       - name: Generate provenance for build in previous job
+#         run: |
+#           export GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
+#           export DIGEST=$(sha256sum SLSA_BINARY | awk '{print $1}')
+#           ./prov -repository ${{ github.repository }} -digest $DIGEST > att.provenance
+#           ls
+      
+#       - name: Log in to the GitHub Container registry
+#         uses: docker/login-action@f054a8b539a109f9f41c372932f1ae047eff08c9
+#         with:
+#           registry: ${{ env.REGISTRY }}
+#           username: ${{ github.actor }}
+#           password: ${{ secrets.GITHUB_TOKEN }}
+
+#       # sign binary and provenance and upload to Container registry
+#       - uses: sigstore/cosign-installer@main
+#       - name: Upload binary as blob and sign with provenance
+#         id: cosignid
+#         env:
+#           COSIGN_EXPERIMENTAL: "true"
+#         run: |
+#           cosign upload blob -f SLSA_BINARY ghcr.io/asraa/slsa-github-demo
+#           cosign sign ghcr.io/asraa/slsa-github-demo
+#           cosign attest --predicate att.provenance ghcr.io/asraa/slsa-github-demo
+#           echo "::set-output name=go-binary-name::SLSA_BINARY"
+
+name: Reusable workflow
 
 on:
   workflow_call:
-    inputs:
-      go-version:
-        required: true
-        type: string
-      working-dir:
-        required: false
-        type: string
+    # Map the workflow outputs to job outputs
     outputs:
-      go-binary-name:
-        description: "The name of the generated binary uploaded to the artifact registry"
-        value: ${{ jobs.provenance.outputs.go-binary-name }}
+      firstword:
+        description: "The first output string"
+        value: ${{ jobs.example_job.outputs.output1 }}
+      secondword:
+        description: "The second output string"
+        value: ${{ jobs.example_job.outputs.output2 }}
 
- 
 jobs:
-  # scorecard-provenance:
-  #   name: scorecard provenance
-  #   runs-on: ubuntu-latest
-  build:
+  example_job:
+    name: Generate output
     runs-on: ubuntu-latest
-    steps:
-      - uses: ../../asraa/slsa-on-github/build-go
-        with:
-          go-version: ${{ inputs.go-version }}
-          working-dir: ${{ inputs.working-dir }}
-
-  provenance:
-    permissions:
-      id-token: write
-      packages: write
-      contents: read
-
-    name: provenance
+    # Map the job outputs to step outputs
     outputs:
-      go-binary-name: ${{ steps.cosignid.outputs.go-binary-name }}
-    runs-on: ubuntu-latest
-    # Requires build to complete
-    needs: build
+      output1: ${{ steps.step1.outputs.firstword }}
+      output2: ${{ steps.step2.outputs.secondword }}
     steps:
-      # TODO package all of this into an action
-      - uses: actions/checkout@v2.4.0
-        with:
-          repository: 'asraa/slsa-on-github'
-      - uses: actions/setup-go@v2
-      - name: build provenance generator
-        run: go build -o prov ./cmd/main.go
-
-      # Download build from previous job
-      - uses: 'actions/download-artifact@v2'
-        with:
-          name: SLSA_BINARY
-
-      - name: Generate provenance for build in previous job
-        run: |
-          export GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
-          export DIGEST=$(sha256sum SLSA_BINARY | awk '{print $1}')
-          ./prov -repository ${{ github.repository }} -digest $DIGEST > att.provenance
-          ls
-      
-      - name: Log in to the GitHub Container registry
-        uses: docker/login-action@f054a8b539a109f9f41c372932f1ae047eff08c9
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      # sign binary and provenance and upload to Container registry
-      - uses: sigstore/cosign-installer@main
-      - name: Upload binary as blob and sign with provenance
-        id: cosignid
-        env:
-          COSIGN_EXPERIMENTAL: "true"
-        run: |
-          cosign upload blob -f SLSA_BINARY ghcr.io/asraa/slsa-github-demo
-          cosign sign ghcr.io/asraa/slsa-github-demo
-          cosign attest --predicate att.provenance ghcr.io/asraa/slsa-github-demo
-          echo "::set-output name=go-binary-name::SLSA_BINARY"
-  # example_job:
-  #   name: Generate output
-  #   runs-on: ubuntu-latest
-  #   # Map the job outputs to step outputs
-  #   outputs:
-  #     output1: ${{ steps.step1.outputs.firstword }}
-  #     output2: ${{ steps.step2.outputs.secondword }}
-  #   steps:
-  #     - id: step1
-  #       run: echo "::set-output name=firstword::hello"
-  #     - id: step2
-  #       run: echo "::set-output name=secondword::world"
+      - id: step1
+        run: echo "::set-output name=firstword::hello"
+      - id: step2
+        run: echo "::set-output name=secondword::world"
