@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
-	"flag"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -17,45 +17,35 @@ import (
 )
 
 func main() {
-	// get org and repo flags
-	repoStr := flag.String("repository", "", "owner and repository to fetch build logs, e.g. ossf/scorecard")
-	digestStr := flag.String("digest", "", "sha256 digest of the input binary being produced")
-	flag.Parse()
-
-	if *repoStr == "" {
-		flag.Usage()
-		return
+	// Check for org and repo env variables
+	repository, ok := os.LookupEnv("GITHUB_REPOSITORY")
+	if !ok {
+		log.Fatal(errors.New("Environment variable GITHUB_REPOSITORY not present"))
 	}
-
-	if *digestStr == "" {
-		flag.Usage()
-		return
+	digest, ok := os.LookupEnv("INPUT_DIGEST")
+	if !ok {
+		log.Fatal(errors.New("Environment variable INPUT_DIGEST not present"))
 	}
 
 	// Check for GITHUB env variables
 	ghRunIdStr, ok := os.LookupEnv("GITHUB_RUN_ID")
 	if !ok {
-		fmt.Fprintln(os.Stderr, "Environment variable GITHUB_RUN_ID not present")
-		os.Exit(1)
+		log.Fatal(errors.New("Environment variable GITHUB_RUN_ID not present"))
 	}
 
 	ghRunId, err := strconv.ParseInt(ghRunIdStr, 10, 64)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Invalid github run ID string: %v", err)
-		os.Exit(1)
+		log.Fatal(fmt.Errorf("Invalid github run ID string: %v", err))
 	}
 
-	digest := *digestStr
 	if _, err := hex.DecodeString(digest); err != nil && len(digest) != 64 {
-		fmt.Fprintln(os.Stderr, "sha256 digest is not valid")
-		os.Exit(1)
+		log.Fatal(errors.New("sha256 digest is not valid"))
 	}
 
 	// split string
-	z := strings.SplitN(*repoStr, "/", 2)
+	z := strings.SplitN(repository, "/", 2)
 	if z == nil || len(z) != 2 {
-		flag.Usage()
-		return
+		log.Fatal(errors.New("sha256 digest is not valid"))
 	}
 	org := z[0]
 	repo := z[1]
@@ -63,7 +53,7 @@ func main() {
 	// make github client
 	token, ok := os.LookupEnv("GITHUB_TOKEN")
 	if !ok {
-		fmt.Printf("%s", "missing GITHUB_TOKEN")
+		log.Fatal(errors.New("missing GITHUB_TOKEN"))
 	}
 	ctx := context.Background()
 	// Requires a token with repo scope
@@ -86,5 +76,5 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(string(attBytes))
+	fmt.Println(fmt.Sprintf(`::set-output name=provenance::%s`, string(attBytes)))
 }
