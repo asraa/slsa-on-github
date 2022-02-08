@@ -17,6 +17,8 @@ jobs:
           path: ./slsa-provenance/generator/main
   provenance:
     runs-on: ubuntu-latest
+    # Requires build to complete
+    needs: build
     steps:
       # Download build from previous job
       - uses: actions/checkout@v2.4.0
