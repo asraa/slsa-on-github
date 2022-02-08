@@ -29,5 +29,6 @@ runs:
         token: ${{ inputs.github_token }}
     - name: Set provenance output
       run: | 
-        echo `::set-output name=provenance::${{ steps.provenance.outputs.provenance }}`
+        echo "${{ steps.provenance.outputs.provenance }}"
+        echo "::set-output name=provenance::${{ steps.provenance.outputs.provenance }}"
       shell: bash
