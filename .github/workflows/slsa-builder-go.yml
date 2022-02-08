@@ -1,6 +1,6 @@
 name: Reusable workflow
 
-permissions:
+permissions: read-all
 
 env:
   GENERATED_BINARY: generated-go-binary
@@ -81,6 +81,7 @@ jobs:
   provenance:
     permissions:
       id-token: write
+      # package should be removed and done by caller.
       packages: write
       contents: read
 
