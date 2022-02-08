@@ -15,7 +15,7 @@ runs:
   steps:
     - uses: 'actions/download-artifact@v2'
       with:
-        name: binary
+        name: ${{ inputs.binary }}
     - name: Set env
       run: echo "DIGEST=$(sha256sum binary | awk '{print $1}')""
       shell: bash
