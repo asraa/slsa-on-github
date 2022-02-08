@@ -80,7 +80,7 @@ jobs:
     permissions:
       id-token: write
       # package should be removed and done by caller.
-      packages: write
+      # packages: write
       contents: read
 
     name: provenance
