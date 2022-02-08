@@ -22,7 +22,7 @@ on:
 jobs:
   build:
     outputs:
-      go-binary-name: ${{ steps.build-gen.outputs.go-binary-name }}
+      go-binary-sha256: ${{ steps.build-gen.outputs.go-binary-sha256 }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the repository
