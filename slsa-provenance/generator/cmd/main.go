@@ -72,9 +72,9 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	attBytes, err := json.MarshalIndent(att, "", "\t")
+	attBytes, err := json.Marshal(att)
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(fmt.Sprintf("::set-output name=provenance::%s", string(attBytes)))
+	fmt.Println(fmt.Sprintf(`::set-output name=provenance::%s`, string(attBytes)))
 }
