@@ -17,8 +17,10 @@ runs:
       with:
         name: ${{ inputs.binary }}
     - name: Set env
-      run: echo "DIGEST=$(sha256sum binary | awk '{print $1}')"
+      run: echo "DIGEST=$(sha256sum ${{ inputs.binary }} | awk '{print $1}')"
       shell: bash
+    # Checkout for local action
+    - uses: actions/checkout@v2.4.0
     - uses: './generator'
       with:
         digest: $DIGEST
