@@ -8,13 +8,13 @@ on:
       go-version:
         required: true
         type: string
-      # working-dir:
-      #   required: false
-      #   type: string
-    # outputs:
-    #   go-binary-name:
-    #     description: "The name of the generated binary uploaded to the artifact registry"
-    #     value: ${{ jobs.provenance.outputs.go-binary-name }}
+      working-dir:
+        required: false
+        type: string
+    outputs:
+      go-binary-name:
+        description: "The name of the generated binary uploaded to the artifact registry"
+        value: ${{ jobs.provenance.outputs.go-binary-name }}
 
  
 jobs:
