@@ -17,11 +17,12 @@ runs:
       with:
         name: ${{ inputs.binary }}
     - name: Set env
-      run: echo "DIGEST=$(sha256sum ${{ inputs.binary }} | awk '{print $1}')"
+      run: | 
+        echo "digest=$(sha256sum ${{ inputs.binary }} | awk '{print $1}')" >> $GITHUB_ENV
       shell: bash
     # Checkout for local action
     - uses: actions/checkout@v2.4.0
     - uses: './slsa-provenance/generator'
       with:
-        digest: $DIGEST
+        digest: ${{ env.digest }}
         token: ${{ inputs.github_token }}

@@ -39,7 +39,7 @@ func main() {
 	}
 
 	if _, err := hex.DecodeString(digest); err != nil && len(digest) != 64 {
-		log.Fatal(errors.New("sha256 digest is not valid"))
+		log.Fatal(fmt.Errorf("sha256 digest is not valid: %s", digest))
 	}
 
 	// split string
