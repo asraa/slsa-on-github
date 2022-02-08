@@ -17,7 +17,7 @@ on:
     outputs:
       go-binary-name:
         description: "The name of the generated binary uploaded to the artifact registry"
-        value: ${{ jobs.build.outputs.go-binary-name }}
+        value: ${{ env.GENERATED_BINARY }}
 
 jobs:
   build:
@@ -57,16 +57,15 @@ jobs:
         id: build-gen
         shell: bash
         run: |
-          go build -o $GENERATED_BINARY
-          echo "::set-output name=go-binary-name::$GENERATED_BINARY"
+          go build -o ${{ env.GENERATED_BINARY }}
           echo "::set-output name=go-binary-sha256::some-hash"
 
       #TODO(upload): verify how the action handles malicious names.
       - name: Upload the artifact
         uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 # v2.3.1
         with:
-          name: $GENERATED_BINARY
-          path: $GENERATED_BINARY
+          name: ${{ env.GENERATED_BINARY }}
+          path: ${{ env.GENERATED_BINARY }}
           retention-days: 5
 
   provenance:
@@ -89,13 +88,13 @@ jobs:
       # Download build from previous job
       - uses: 'actions/download-artifact@v2'
         with:
-          name: $GENERATED_BINARY
+          name: ${{ env.GENERATED_BINARY }}
 
       - name: Generate provenance for build in previous job
         run: |
           echo expected hash is ${{ needs.build.outputs.go-binary-sha256 }}
           export GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
-          export DIGEST=$(sha256sum $GENERATED_BINARY | awk '{print $1}')
+          export DIGEST=$(sha256sum ${{ env.GENERATED_BINARY }} | awk '{print $1}')
           ./prov -repository ${{ github.repository }} -digest $DIGEST > att.provenance
           ls
       
@@ -113,7 +112,7 @@ jobs:
         env:
           COSIGN_EXPERIMENTAL: "true"
         run: |
-          cosign upload blob -f $GENERATED_BINARY ghcr.io/asraa/slsa-github-demo
+          cosign upload blob -f ${{ env.GENERATED_BINARY }} ghcr.io/asraa/slsa-github-demo
           cosign sign ghcr.io/asraa/slsa-github-demo
           cosign attest --predicate att.provenance ghcr.io/asraa/slsa-github-demo
 
