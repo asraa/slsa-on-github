@@ -59,7 +59,8 @@ jobs:
         run: |
           go build -o ${{ env.GENERATED_BINARY }}
           echo "::set-output name=go-binary-name::${{ env.GENERATED_BINARY }}"
-          echo "::set-output name=go-binary-sha256::some-hash"
+          export DIGEST=$(sha256sum ${{ env.GENERATED_BINARY }} | awk '{print $1}')
+          echo "::set-output name=go-binary-sha256::$DIGEST"
 
       #TODO(upload): verify how the action handles malicious names.
       - name: Upload the artifact
@@ -95,8 +96,7 @@ jobs:
         run: |
           echo expected hash is ${{ needs.build.outputs.go-binary-sha256 }}
           export GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
-          export DIGEST=$(sha256sum $${{ env.BUILDER_GO_VERSION }} | awk '{print $1}')
-          ./prov -repository ${{ github.repository }} -digest $DIGEST > att.provenance
+          ./prov -repository ${{ github.repository }} -digest ${{ needs.build.outputs.go-binary-sha256 }} > att.provenance
           ls
       
       - name: Log in to the GitHub Container registry
