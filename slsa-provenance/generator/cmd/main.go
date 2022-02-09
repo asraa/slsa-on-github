@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strconv"
 	"strings"
 
 	"github.com/asraa/slsa-on-github/slsa-provenance/generator/pkg/provenance"
@@ -27,16 +26,18 @@ func main() {
 		log.Fatal(errors.New("Environment variable INPUT_DIGEST not present"))
 	}
 
-	// Check for GITHUB env variables
-	ghRunIdStr, ok := os.LookupEnv("GITHUB_RUN_ID")
-	if !ok {
-		log.Fatal(errors.New("Environment variable GITHUB_RUN_ID not present"))
-	}
+	// // Check for GITHUB env variables
+	// ghRunIdStr, ok := os.LookupEnv("GITHUB_RUN_ID")
+	// if !ok {
+	// 	fmt.Fprintln(os.Stderr, "Environment variable GITHUB_RUN_ID not present")
+	// 	os.Exit(1)
+	// }
 
-	ghRunId, err := strconv.ParseInt(ghRunIdStr, 10, 64)
-	if err != nil {
-		log.Fatal(fmt.Errorf("Invalid github run ID string: %v", err))
-	}
+	// ghRunId, err := strconv.ParseInt(ghRunIdStr, 10, 64)
+	// if err != nil {
+	// 	fmt.Fprintf(os.Stderr, "Invalid github run ID string: %v", err)
+	// 	os.Exit(1)
+	// }
 
 	if _, err := hex.DecodeString(digest); err != nil && len(digest) != 64 {
 		log.Fatal(fmt.Errorf("sha256 digest is not valid: %s", digest))

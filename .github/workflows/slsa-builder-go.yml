@@ -1,0 +1,128 @@
+name: SLSA go builder
+
+permissions:
+  contents: read
+
+env:
+  GENERATED_BINARY: generated-go-binary
+  #TODO: let caller upload ?
+  REGISTRY: ghcr.io
+
+on:
+  workflow_call:
+    inputs:
+      go-version:
+        description: "The go version to use"
+        required: true
+        type: string
+      working-dir:
+        description: "Working directory to build the binary"
+        required: false
+        type: string
+    outputs:
+      go-binary-name:
+        description: "The name of the generated binary uploaded to the artifact registry"
+        value: ${{ jobs.build.outputs.go-binary-name }}
+
+jobs:
+  build:
+    outputs:
+      go-binary-sha256: ${{ steps.build-gen.outputs.go-binary-sha256 }}
+      go-binary-name: ${{ steps.build-gen.outputs.go-binary-name }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 # v2.3.4
+        with:
+          fetch-depth: 0
+      # Code needed (not tested) if go-vesion is made optional.
+      # See https://stackoverflow.com/questions/67368005/check-whether-environment-variable-is-empty.
+      - name: Set up golang environment
+        uses: actions/setup-go@424fc82d43fa5a37540bae62709ddcc23d9520d4 # v2.1.3
+        with:
+          go-version: ${{ inputs.go-version }}
+      
+      # TODO(hermeticity)
+      # - name: Enable hermeticity
+      # uses: slsa/hermeticity@xxx
+      #   with:
+      #     to-state: enabled
+
+      - name: Download dependencies
+        shell: bash
+        run: |
+          go mod vendor
+      
+      # TODO(hermeticity)
+      # - name: Disable hermeticity
+      # uses: slsa/hermeticity@xxx
+      #   with:
+      #     to-state: disabled
+
+      - name: Build project
+        id: build-gen
+        shell: bash
+        # TODO: change directory using working-dir.
+        run: |
+          go build -mod=vendor -o ${{ env.GENERATED_BINARY }}
+          export DIGEST=$(sha256sum ${{ env.GENERATED_BINARY }} | awk '{print $1}')
+          echo "::set-output name=go-binary-name::${{ env.GENERATED_BINARY }}"
+          echo "::set-output name=go-binary-sha256::$DIGEST"
+
+      #TODO(upload): verify how the action handles malicious names.
+      - name: Upload the artifact
+        uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 # v2.3.1
+        with:
+          name: ${{ env.GENERATED_BINARY }}
+          path: ${{ env.GENERATED_BINARY }}
+          retention-days: 5
+
+  provenance:
+    permissions:
+      id-token: write
+      # package should be removed and done by caller.
+      # packages: write
+      contents: read
+
+    name: provenance
+    runs-on: ubuntu-latest
+    needs: build
+    steps:    
+      - uses: actions/checkout@v2.4.0
+        with:
+          repository: 'asraa/slsa-on-github'
+      - uses: actions/setup-go@v2
+      - name: build provenance generator
+        run: go build -o prov ./cmd/main.go
+
+      # Download build from previous job
+      - uses: 'actions/download-artifact@v2'
+        with:
+          name: ${{ env.GENERATED_BINARY }}
+
+      - name: Generate provenance for build in previous job
+        env:
+          DIGEST: ${{ needs.build.outputs.go-binary-sha256 }}
+        run: |
+          echo expected hash is $DIGEST
+          export GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
+          echo ./prov -repository ${{ github.repository }} -digest $DIGEST > att.provenance
+          ls
+      
+      - name: Log in to the GitHub Container registry
+        uses: docker/login-action@f054a8b539a109f9f41c372932f1ae047eff08c9
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # sign binary and provenance and upload to Container registry
+      - uses: sigstore/cosign-installer@main
+      - name: Upload binary as blob and sign with provenance
+        id: cosignid
+        env:
+          COSIGN_EXPERIMENTAL: "true"
+        run: |
+          echo cosign upload blob -f ${{ env.GENERATED_BINARY }} ghcr.io/asraa/slsa-github-demo
+          echo cosign sign ghcr.io/asraa/slsa-github-demo
+          echo cosign attest --predicate att.provenance ghcr.io/asraa/slsa-github-demo
