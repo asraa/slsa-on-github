@@ -64,7 +64,7 @@ jobs:
         shell: bash
         # TODO: change directory using working-dir.
         run: |
-          go build -o ${{ env.GENERATED_BINARY }}
+          go build -mod=vendor -o ${{ env.GENERATED_BINARY }}
           export DIGEST=$(sha256sum ${{ env.GENERATED_BINARY }} | awk '{print $1}')
           echo "::set-output name=go-binary-name::${{ env.GENERATED_BINARY }}"
           echo "::set-output name=go-binary-sha256::$DIGEST"
