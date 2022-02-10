@@ -15,6 +15,22 @@ on:
         description: "The go version to use"
         required: true
         type: string
+      flags:
+        description: "Additional flags to go build"
+        required: false
+        type: string
+      goos:
+        description: "OS to build for"
+        required: true
+        type: string
+      goarch:
+        description: "Architecture to build for"
+        required: true
+        type: string
+      ldflags:
+        description: "Ldflags to use"
+        required: false
+        type: string
       working-dir:
         description: "Working directory to build the binary"
         required: false
@@ -62,9 +78,19 @@ jobs:
       - name: Build project
         id: build-gen
         shell: bash
+        env:
+          GOOS: ${{ inputs.goos }}
+          GOARCH: ${{ inputs.goarch }}
+          LDFLAGS: ${{ inputs.ldflags }}
+          FLAGS: ${{ inputs.flags }}
         # TODO: change directory using working-dir.
+        # TODO: document the default arguments, or remove them.
+        # env GOOS=target-OS GOARCH=target-architecture go build
+        # TODO: create a program to build.
+        # *** WARNING: below is vulnerable to script injection w/ FLAGS. This will be updated via
+        # a program that uses Exec().
         run: |
-          go build -mod=vendor -o ${{ env.GENERATED_BINARY }}
+          go build $FLAGS -trimpath -tags=netgo -ldflags="$LDFLAGS" -mod=vendor -o "${{ env.GENERATED_BINARY }}-$GOOS-$GOARCH"
           export DIGEST=$(sha256sum ${{ env.GENERATED_BINARY }} | awk '{print $1}')
           echo "::set-output name=go-binary-name::${{ env.GENERATED_BINARY }}"
           echo "::set-output name=go-binary-sha256::$DIGEST"
