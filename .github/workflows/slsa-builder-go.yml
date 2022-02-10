@@ -83,16 +83,16 @@ jobs:
           GOARCH: ${{ inputs.goarch }}
           LDFLAGS: ${{ inputs.ldflags }}
           FLAGS: ${{ inputs.flags }}
+          BINARY_NAME: ${{ env.GENERATED_BINARY }}-${{ inputs.goos }}-${{ inputs.goarch }}
         # TODO: change directory using working-dir.
         # TODO: document the default arguments, or remove them.
         # env GOOS=target-OS GOARCH=target-architecture go build
-        # TODO: create a program to build.
         # *** WARNING: below is vulnerable to script injection w/ FLAGS. This will be updated via
         # a program that uses Exec().
         run: |
-          go build $FLAGS -trimpath -tags=netgo -ldflags="$LDFLAGS" -mod=vendor -o "${{ env.GENERATED_BINARY }}-$GOOS-$GOARCH"
+          go build $FLAGS -trimpath -tags=netgo -ldflags="$LDFLAGS" -mod=vendor -o "$BINARY_NAME"
           export DIGEST=$(sha256sum ${{ env.GENERATED_BINARY }} | awk '{print $1}')
-          echo "::set-output name=go-binary-name::${{ env.GENERATED_BINARY }}"
+          echo "::set-output name=go-binary-name::$BINARY_NAME"
           echo "::set-output name=go-binary-sha256::$DIGEST"
 
       #TODO(upload): verify how the action handles malicious names.
