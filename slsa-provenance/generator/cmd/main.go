@@ -79,5 +79,5 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(fmt.Sprintf(`::set-output name=provenance::%s`, string(attBytes)))
+	fmt.Printf(`::set-output name=provenance::%s`, string(attBytes))
 }

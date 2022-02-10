@@ -139,7 +139,7 @@ jobs:
         env:
           DIGEST: ${{ needs.build.outputs.go-binary-sha256 }}
           UNTRUSTED_BINARY_NAME: ${{ needs.build.outputs.go-binary-name }}
-        # TODO: don't have secret in script
+        # TODO: don't store secret in script, set as env variable instead
         run: |
           echo expected hash is $DIGEST
           export GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
