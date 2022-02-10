@@ -79,28 +79,32 @@ jobs:
         id: build-gen
         shell: bash
         env:
+          # TODO: rename with UNTRUSTED_ once e have a program
           GOOS: ${{ inputs.goos }}
           GOARCH: ${{ inputs.goarch }}
-          LDFLAGS: ${{ inputs.ldflags }}
-          FLAGS: ${{ inputs.flags }}
-          BINARY_NAME: ${{ env.GENERATED_BINARY }}-${{ inputs.goos }}-${{ inputs.goarch }}
+          UNTRUSTED_LDFLAGS: ${{ inputs.ldflags }}
+          UNTRUSTED_FLAGS: ${{ inputs.flags }}
+          # Note: inputs are not verified and untrusted.
+          # TODO: update names with UNTRUSTED_
+          UNTRUSTED_BINARY_NAME: ${{ env.GENERATED_BINARY }}-${{ inputs.goos }}-${{ inputs.goarch }}
         # TODO: change directory using working-dir.
         # TODO: document the default arguments, or remove them.
         # env GOOS=target-OS GOARCH=target-architecture go build
         # *** WARNING: below is vulnerable to script injection w/ FLAGS. This will be updated via
         # a program that uses Exec().
         run: |
-          go build $FLAGS -trimpath -tags=netgo -ldflags="$LDFLAGS" -mod=vendor -o "$BINARY_NAME"
-          export DIGEST=$(sha256sum ${{ env.GENERATED_BINARY }} | awk '{print $1}')
-          echo "::set-output name=go-binary-name::$BINARY_NAME"
+          echo "ENV_TEST: $ENV_TEST"
+          go build $UNTRUSTED_FLAGS -trimpath -tags=netgo -ldflags="$UNTRUSTED_LDFLAGS" -mod=vendor -o "$UNTRUSTED_BINARY_NAME"
+          export DIGEST=$(sha256sum "$UNTRUSTED_BINARY_NAME" | awk '{print $1}')
+          echo "::set-output name=go-binary-name::$UNTRUSTED_BINARY_NAME"
           echo "::set-output name=go-binary-sha256::$DIGEST"
 
       #TODO(upload): verify how the action handles malicious names.
       - name: Upload the artifact
         uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 # v2.3.1
         with:
-          name: ${{ env.GENERATED_BINARY }}
-          path: ${{ env.GENERATED_BINARY }}
+          name: ${{ steps.build-gen.outputs.go-binary-name }}
+          path: ${{ steps.build-gen.outputs.go-binary-name }}
           retention-days: 5
 
   provenance:
@@ -124,7 +128,7 @@ jobs:
       # Download build from previous job
       - uses: 'actions/download-artifact@v2'
         with:
-          name: ${{ env.GENERATED_BINARY }}
+          name: ${{ steps.build-gen.outputs.go-binary-name }}
 
       - name: Generate provenance for build in previous job
         env:
@@ -148,7 +152,9 @@ jobs:
         id: cosignid
         env:
           COSIGN_EXPERIMENTAL: "true"
+          # Note: binary name is not verified
+          UNTRUSTED_BINARY_NAME: ${{ steps.build-gen.outputs.go-binary-name }}
         run: |
-          echo cosign upload blob -f ${{ env.GENERATED_BINARY }} ghcr.io/asraa/slsa-github-demo
+          echo cosign upload blob -f "$UNTRUSTED_BINARY_NAME" ghcr.io/asraa/slsa-github-demo
           echo cosign sign ghcr.io/asraa/slsa-github-demo
           echo cosign attest --predicate att.provenance ghcr.io/asraa/slsa-github-demo
