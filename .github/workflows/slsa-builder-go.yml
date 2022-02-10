@@ -125,10 +125,12 @@ jobs:
         with:
           repository: 'asraa/slsa-on-github'
       - uses: actions/setup-go@v2
-      - name: build provenance generator
-        run: |
-          cd slsa-provenance/generator/
-          go build -o prov ./cmd/main.go
+      # - name: build provenance generator
+      #   run: |
+      #     cd slsa-provenance/generator/
+      #     go build -o ../../prov ./cmd/main.go
+      #     cd
+      #     
 
       # Download build from previous job
       - uses: 'actions/download-artifact@v2'
@@ -144,6 +146,7 @@ jobs:
           echo expected hash is $DIGEST
           export GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
           echo ./prov -repository ${{ github.repository }} -digest $DIGEST > att.provenance
+          echo "::set-output name=provenance::{{intoto-attestation-test}}"
           ls
       
       - name: Log in to the GitHub Container registry
