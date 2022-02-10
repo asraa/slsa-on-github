@@ -146,7 +146,7 @@ jobs:
           echo expected hash is $DIGEST
           export GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
           echo ./prov -repository ${{ github.repository }} -digest $DIGEST > att.provenance
-          echo "::set-output name=provenance::{{intoto-attestation-test}}"
+          cat att.provenance
           ls
       
       - name: Log in to the GitHub Container registry
