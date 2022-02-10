@@ -13,6 +13,7 @@ var (
 	errorEnvVariableNameEmpty      = errors.New("env variable empty or not set")
 	errorUnsupportedArguments      = errors.New("argument not supported")
 	errorEnvVariableNameNotAllowed = errors.New("env variable not allowed")
+	errorInvalidFilename           = errors.New("invalid filename")
 )
 
 var disallowedArgs = map[string]bool{
@@ -26,10 +27,11 @@ var disallowedArgs = map[string]bool{
 }
 
 type GoBuild struct {
-	cfg     *GoReleaserConfig
-	goc     string
-	flags   []string
-	ldflags string
+	cfg      *GoReleaserConfig
+	goc      string
+	flags    []string
+	ldflags  string
+	filename string
 }
 
 func GoBuildNew(goc string, cfg *GoReleaserConfig) *GoBuild {
@@ -44,9 +46,7 @@ func (b *GoBuild) Run() error {
 	if len(b.ldflags) > 0 {
 		b.flags = append(b.flags, "-ldflags", b.ldflags)
 	}
-	fmt.Println("ldflags:", b.ldflags)
-	fmt.Println("flags:", b.flags)
-	fmt.Println("env:", os.Environ())
+
 	return syscall.Exec(b.goc, b.flags, os.Environ())
 }
 
@@ -69,6 +69,20 @@ func (b *GoBuild) SetEnvVariables() error {
 			return fmt.Errorf("os.Setenv: %w", err)
 		}
 	}
+	return nil
+}
+
+func (b *GoBuild) SetOutputFilename(name string) error {
+	const alpha = "abcdefghijklmnopqrstuvwxyz1234567890-_"
+
+	for _, char := range name {
+		if !strings.Contains(alpha, strings.ToLower(string(char))) {
+			return fmt.Errorf("%w: found character '%c'", errorInvalidFilename, char)
+		}
+	}
+
+	b.filename = name
+
 	return nil
 }
 
