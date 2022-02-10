@@ -36,6 +36,10 @@ on:
         description: "Ldflags to use"
         required: false
         type: string
+      envs:
+        description: "Environment env to use"
+        required: false
+        type: string
       working-dir:
         description: "Working directory to build the binary"
         required: false
@@ -90,6 +94,7 @@ jobs:
           UNTRUSTED_LDFLAGS: ${{ inputs.ldflags }}
           UNTRUSTED_FLAGS: ${{ inputs.flags }}
           UNTRUSTED_BINARY_NAME: ${{ env.GENERATED_BINARY }}-${{ inputs.goos }}-${{ inputs.goarch }}
+          UNTRUSTED_ENVS: ${{ input.envs }}
         # TODO: change directory using working-dir.
         # TODO: document the default arguments, or remove them.
         # env GOOS=target-OS GOARCH=target-architecture go build
@@ -97,6 +102,7 @@ jobs:
         # a program that uses Exec().
         run: |
           echo "ENV_TEST: $ENV_TEST"
+          echo "UNTRUSTED_ENVS: $UNTRUSTED_ENVS"
           go build $UNTRUSTED_FLAGS -trimpath -tags=netgo -ldflags="$UNTRUSTED_LDFLAGS" -mod=vendor -o "$UNTRUSTED_BINARY_NAME"
           export DIGEST=$(sha256sum "$UNTRUSTED_BINARY_NAME" | awk '{print $1}')
           echo "::set-output name=go-binary-name::$UNTRUSTED_BINARY_NAME"
