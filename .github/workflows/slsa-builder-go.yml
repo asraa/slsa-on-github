@@ -16,34 +16,11 @@ env:
 on:
   workflow_call:
     inputs:
-      go-version:
-        description: "The go version to use"
-        required: true
-        type: string
-      flags:
-        description: "Additional flags to go build"
-        required: false
-        type: string
-      goos:
-        description: "OS to build for"
-        required: true
-        type: string
-      goarch:
-        description: "Architecture to build for"
-        required: true
-        type: string
-      ldflags:
-        description: "Ldflags to use"
-        required: false
-        type: string
-      envs:
-        description: "Environment env to use"
-        required: false
-        type: string
-      working-dir:
-        description: "Working directory to build the binary"
-        required: false
-        type: string
+      # TODO: is this needed?
+      # go-version:
+      #   description: "The go version to use"
+      #   required: true
+      #   type: string
     outputs:
       go-binary-name:
         description: "The name of the generated binary uploaded to the artifact registry"

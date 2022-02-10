@@ -20,6 +20,9 @@ var disallowedArgs = map[string]bool{
 	"-toolexec": true,
 	// Allows overwriting existing files on the machine.
 	"-o": true,
+	// Allows turning off vendoring/hermeticity.
+	// See https://golang.org/ref/mod#build-commands.
+	"-mod=": true,
 }
 
 type GoBuild struct {
@@ -70,7 +73,7 @@ func (b *GoBuild) SetEnvVariables() error {
 }
 
 func (b *GoBuild) SetFlags(flags []string) error {
-	b.flags = []string{b.goc, "build"}
+	b.flags = []string{b.goc, "build", "-mod=vendor"}
 
 	for _, v := range flags {
 		if !isAllowedArg(v) {
