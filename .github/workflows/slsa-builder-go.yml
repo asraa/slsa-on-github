@@ -94,7 +94,7 @@ jobs:
           UNTRUSTED_LDFLAGS: ${{ inputs.ldflags }}
           UNTRUSTED_FLAGS: ${{ inputs.flags }}
           UNTRUSTED_BINARY_NAME: ${{ env.GENERATED_BINARY }}-${{ inputs.goos }}-${{ inputs.goarch }}
-          UNTRUSTED_ENVS: ${{ input.envs }}
+          UNTRUSTED_ENVS: ${{ inputs.envs }}
         # TODO: change directory using working-dir.
         # TODO: document the default arguments, or remove them.
         # env GOOS=target-OS GOARCH=target-architecture go build
