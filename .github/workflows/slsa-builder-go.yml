@@ -8,6 +8,11 @@ env:
   #TODO: let caller upload ?
   REGISTRY: ghcr.io
 
+###################################################################
+#                                                                 #
+#            Input and output argument definitions                #
+#                                                                 #
+###################################################################
 on:
   workflow_call:
     inputs:
@@ -133,6 +138,8 @@ jobs:
       - name: Generate provenance for build in previous job
         env:
           DIGEST: ${{ needs.build.outputs.go-binary-sha256 }}
+          UNTRUSTED_BINARY_NAME: ${{ needs.build.outputs.go-binary-name }}
+        # TODO: don't have secret in script
         run: |
           echo expected hash is $DIGEST
           export GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
