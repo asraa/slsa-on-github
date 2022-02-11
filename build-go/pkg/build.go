@@ -45,11 +45,12 @@ func GoBuildNew(goc string, cfg *GoReleaserConfig) *GoBuild {
 }
 
 func (b *GoBuild) Run() error {
+	flags := b.flags
 	if len(b.ldflags) > 0 {
-		b.flags = append(b.flags, "-ldflags", b.ldflags)
+		flags = append(flags, "-ldflags", b.ldflags)
 	}
 
-	return syscall.Exec(b.goc, b.flags, os.Environ())
+	return syscall.Exec(b.goc, flags, os.Environ())
 }
 
 func (b *GoBuild) SetEnvVariables(envs string) error {
