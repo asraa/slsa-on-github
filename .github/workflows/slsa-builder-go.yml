@@ -69,6 +69,8 @@ jobs:
       - name: Build builder
         shell: bash
         run: |
+            pwd
+            ls
             export OPWD="$PWD"
             git clone https://github.com/laurentsimon/slsa-on-github
             cd slsa-on-github
