@@ -76,7 +76,7 @@ jobs:
             ls
             export OPWD="$PWD"
             git clone "$BUILDER_URL" "$BUILDER_FOLDER"
-            cd slsa-on-github
+            cd "$BUILDER_FOLDER"
             git checkout feat/args2
             #git reset --hard $SHA1
             cd build-go
