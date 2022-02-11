@@ -60,6 +60,7 @@ jobs:
       - name: Download dependencies
         shell: bash
         run: |
+          set -e
           go mod vendor
       
       # TODO(hermeticity)
@@ -73,6 +74,7 @@ jobs:
       - name: Build builder
         shell: bash
         run: |
+            set -e
             pwd
             ls
             export OPWD="$PWD"
@@ -89,17 +91,19 @@ jobs:
         id: build-gen
         shell: bash
         env:
-          UNTRUSTED_BINARY_NAME: "${{ env.GENERATED_BINARY }}-${{ inputs.goos }}-${{ inputs.goarch }}"
+          BINARY_NAME: "${{ env.GENERATED_BINARY }}"
           # Dummyjust ensures the value is never
           UNTRUSTED_ENVS: "${{ inputs.env }}"
         # TODO: change directory using working-dir.
         run: |
+          set -e
           #go build $UNTRUSTED_FLAGS -trimpath -tags=netgo -ldflags="$UNTRUSTED_LDFLAGS" -mod=vendor -o "$UNTRUSTED_BINARY_NAME"
           pwd
           ls -l "$BUILDER_FOLDER"/build-go
-          ./"$BUILDER_FOLDER"/build-go/build-go ./releaser.yml "$UNTRUSTED_BINARY_NAME" "$UNTRUSTED_ENVS"
-          export DIGEST=$(sha256sum "$UNTRUSTED_BINARY_NAME" | awk '{print $1}')
-          echo "::set-output name=go-binary-name::$UNTRUSTED_BINARY_NAME"
+          ./"$BUILDER_FOLDER"/build-go/build-go ./releaser.yml "$BINARY_NAME" "$UNTRUSTED_ENVS"
+          export DIGEST=$(sha256sum "$BINARY_NAME" | awk '{print $1}')
+          # TODO: digest and names will be returned by the builder using info frm config file.
+          echo "::set-output name=go-binary-name::$BINARY_NAME"
           echo "::set-output name=go-binary-sha256::$DIGEST"
 
       #TODO(upload): verify how the action handles malicious names.
