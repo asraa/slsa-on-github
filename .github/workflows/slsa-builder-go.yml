@@ -65,14 +65,18 @@ jobs:
       #   with:
       #     to-state: enabled
 
-      # TODO: make the builder's build hermetic.
+      # TODO: download the compiled binary or publish a golang package
       - name: Build builder
         shell: bash
         run: |
+            export OPWD="$PWD"
+            git clone https://github.com/laurentsimon/slsa-on-github
+            cd slsa-on-github
+            git reset --hard feat/args2
             cd build-go
             go build
             ls
-            cd -
+            cd "$OPWD"
 
       - name: Build project
         id: build-gen
