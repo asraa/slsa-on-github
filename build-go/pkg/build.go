@@ -130,6 +130,7 @@ func (b *GoBuild) SetFlags(flags []string) error {
 
 func isAllowedArg(arg string) bool {
 	for k, _ := range disallowedArgs {
+		// TODO: use strings.HasPrefix with allowedList?
 		if strings.Contains(arg, k) {
 			return false
 		}
