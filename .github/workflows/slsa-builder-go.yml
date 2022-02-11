@@ -69,6 +69,7 @@ jobs:
       #     to-state: enabled
 
       # TODO: download the compiled binary or publish a golang package
+      # or do a proper uses: checkout-then-cleanup
       - name: Build builder
         shell: bash
         run: |
@@ -81,7 +82,7 @@ jobs:
             #git reset --hard $SHA1
             cd build-go
             go build
-            ls
+            ls -al
             cd "$OPWD"
 
       - name: Build project
@@ -94,6 +95,7 @@ jobs:
         # TODO: change directory using working-dir.
         run: |
           #go build $UNTRUSTED_FLAGS -trimpath -tags=netgo -ldflags="$UNTRUSTED_LDFLAGS" -mod=vendor -o "$UNTRUSTED_BINARY_NAME"
+          ls "$BUILDER_FOLDER"/build-go
           ."$BUILDER_FOLDER"/build-go/build-go ./releaser.yml "$UNTRUSTED_BINARY_NAME" "$UNTRUSTED_ENVS"
           export DIGEST=$(sha256sum "$UNTRUSTED_BINARY_NAME" | awk '{print $1}')
           echo "::set-output name=go-binary-name::$UNTRUSTED_BINARY_NAME"
