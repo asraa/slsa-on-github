@@ -21,7 +21,7 @@ on:
       #   description: "The go version to use"
       #   required: true
       #   type: string
-      envs:
+      env:
         description: "Env variables to pass to the builder"
         required: false
         type: string
@@ -80,7 +80,7 @@ jobs:
         env:
           UNTRUSTED_BINARY_NAME: "${{ env.GENERATED_BINARY }}-${{ inputs.goos }}-${{ inputs.goarch }}"
           # Dummyjust ensures the value is never
-          UNTRUSTED_ENVS: "${{ inputs.envs }}"
+          UNTRUSTED_ENVS: "${{ inputs.env }}"
         # TODO: change directory using working-dir.
         run: |
           #go build $UNTRUSTED_FLAGS -trimpath -tags=netgo -ldflags="$UNTRUSTED_LDFLAGS" -mod=vendor -o "$UNTRUSTED_BINARY_NAME"
