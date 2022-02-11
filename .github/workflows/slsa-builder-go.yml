@@ -74,7 +74,8 @@ jobs:
             export OPWD="$PWD"
             git clone https://github.com/laurentsimon/slsa-on-github
             cd slsa-on-github
-            git reset --hard feat/args2
+            git checkout feat/args2
+            #git reset --hard $SHA1
             cd build-go
             go build
             ls
