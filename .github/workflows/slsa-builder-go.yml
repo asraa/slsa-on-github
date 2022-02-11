@@ -7,7 +7,7 @@ env:
   GENERATED_BINARY: generated-go-binary
   #TODO: let caller upload ?
   REGISTRY: ghcr.io
-  BUILDER_URL: https://github.com/asraa/slsa-on-github
+  BUILDER_URL: https://github.com/laurentsimon/slsa-on-github
   BUILDER_FOLDER: builder
 
 ###################################################################
