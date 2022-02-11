@@ -22,6 +22,11 @@ on:
         description: "The go version to use"
         required: true
         type: string
+      upload-location:
+        description: "Upload registry location"
+        required: false
+        type: string
+        default: "$REGISTRY/${{ github.repository }}"
       env:
         description: "Env variables to pass to the builder"
         required: false
