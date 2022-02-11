@@ -12,6 +12,7 @@ import (
 var (
 	errorEnvVariableNameEmpty      = errors.New("env variable empty or not set")
 	errorUnsupportedArguments      = errors.New("argument not supported")
+	errorInvalidEnvArgument        = errors.New("invalid env passed via argument")
 	errorEnvVariableNameNotAllowed = errors.New("env variable not allowed")
 	errorInvalidFilename           = errors.New("invalid filename")
 )
@@ -50,7 +51,7 @@ func (b *GoBuild) Run() error {
 	return syscall.Exec(b.goc, b.flags, os.Environ())
 }
 
-func (b *GoBuild) SetEnvVariables() error {
+func (b *GoBuild) SetEnvVariables(envs string) error {
 	if err := os.Setenv("GOOS", b.cfg.Goos); err != nil {
 		return fmt.Errorf("os.Setenv: %w", err)
 	}
@@ -59,13 +60,39 @@ func (b *GoBuild) SetEnvVariables() error {
 		return fmt.Errorf("os.Setenv: %w", err)
 	}
 
-	envs := os.Environ()
+	ees := os.Environ()
 	for k, v := range b.cfg.Env {
-		if !isAllowedEnvVariable(k, envs) {
+		if !isAllowedEnvVariable(k, ees) {
 			return fmt.Errorf("%w: %s", errorEnvVariableNameNotAllowed, v)
 		}
 
 		if err := os.Setenv(k, v); err != nil {
+			return fmt.Errorf("os.Setenv: %w", err)
+		}
+	}
+
+	// Add additional environment variables encoded as argument.
+	// I've tried running the re-usable workflow in a step
+	// and set the env variable in a previous step, but found that a re-usable workflow is not
+	// allowed to run in a step; they have to run as `job.uses`. Using `job.env` with `job.uses`
+	// is not allowed. So for now we need this additional variable.
+	for _, e := range strings.Split(envs, ",") {
+		s := strings.Trim(e, " ")
+		if len(s) == 0 {
+			continue
+		}
+		sp := strings.Split(s, ":")
+		if len(sp) != 2 {
+			return fmt.Errorf("%w: %s", errorInvalidEnvArgument, s)
+		}
+		name := strings.Trim(sp[0], " ")
+		value := strings.Trim(sp[1], " ")
+		if !isAllowedEnvVariable(name, ees) {
+			return fmt.Errorf("%w: %s", errorEnvVariableNameNotAllowed, name)
+		}
+
+		fmt.Printf("arg env: %s:%s\n", name, value)
+		if err := os.Setenv(name, value); err != nil {
 			return fmt.Errorf("os.Setenv: %w", err)
 		}
 	}
@@ -122,11 +149,11 @@ func isAllowedEnvVariable(name string, disallowedEnvs []string) bool {
 }
 
 // TODO: maybe not needed if handled directly by go compiler.
-func (b *GoBuild) SetLdflags(flags []string) error {
+func (b *GoBuild) SetLdflags(ldflags []string) error {
 	var a []string
 	regex := regexp.MustCompile(`{{\s*\.Env\.(.*)\s*}}`)
 
-	for _, v := range flags {
+	for _, v := range ldflags {
 		var res string
 		m := regex.FindStringSubmatch(v)
 		// fmt.Println("match", m[1])
@@ -135,6 +162,7 @@ func (b *GoBuild) SetLdflags(flags []string) error {
 		}
 		if len(m) == 2 {
 			name := strings.Trim(m[1], " ")
+
 			val, exists := os.LookupEnv(name)
 			if !exists {
 				return fmt.Errorf("%w: %s", errorEnvVariableNameEmpty, name)

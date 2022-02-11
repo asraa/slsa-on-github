@@ -21,6 +21,10 @@ on:
       #   description: "The go version to use"
       #   required: true
       #   type: string
+      envs:
+        description: "Env variables to pass to the builder"
+        required: false
+        type: string
     outputs:
       go-binary-name:
         description: "The name of the generated binary uploaded to the artifact registry"
@@ -74,11 +78,13 @@ jobs:
         id: build-gen
         shell: bash
         env:
-          UNTRUSTED_BINARY_NAME: ${{ env.GENERATED_BINARY }}-${{ inputs.goos }}-${{ inputs.goarch }}
+          UNTRUSTED_BINARY_NAME: "${{ env.GENERATED_BINARY }}-${{ inputs.goos }}-${{ inputs.goarch }}"
+          # Dummyjust ensures the value is never
+          UNTRUSTED_ENVS: "${{ inputs.envs }}"
         # TODO: change directory using working-dir.
         run: |
           #go build $UNTRUSTED_FLAGS -trimpath -tags=netgo -ldflags="$UNTRUSTED_LDFLAGS" -mod=vendor -o "$UNTRUSTED_BINARY_NAME"
-          ./build-go/build-go ./releaser.yml "$UNTRUSTED_BINARY_NAME"
+          ./build-go/build-go ./releaser.yml "$UNTRUSTED_BINARY_NAME" "$UNTRUSTED_ENVS"
           export DIGEST=$(sha256sum "$UNTRUSTED_BINARY_NAME" | awk '{print $1}')
           echo "::set-output name=go-binary-name::$UNTRUSTED_BINARY_NAME"
           echo "::set-output name=go-binary-sha256::$DIGEST"

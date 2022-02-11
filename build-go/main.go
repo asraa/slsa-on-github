@@ -9,7 +9,7 @@ import (
 )
 
 func usage(p string) {
-	panic(fmt.Sprintf("Usage: %s <config.yml> <binary-name>\n", p))
+	panic(fmt.Sprintf("Usage: %s <config.yml> <binary-name> <env1:val1,env2:val2>\n", p))
 }
 
 func check(e error) {
@@ -19,7 +19,7 @@ func check(e error) {
 }
 
 func main() {
-	if len(os.Args) <= 2 {
+	if len(os.Args) <= 3 {
 		usage(os.Args[0])
 	}
 	goc, err := exec.LookPath("go")
@@ -36,7 +36,8 @@ func main() {
 	check(err)
 
 	// Set env variables.
-	err = gobuild.SetEnvVariables()
+	// Note: This MUST be called before SetLdflags().
+	err = gobuild.SetEnvVariables(os.Args[3])
 	check(err)
 
 	// Set flags.
