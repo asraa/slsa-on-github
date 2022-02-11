@@ -100,7 +100,9 @@ jobs:
           #go build $UNTRUSTED_FLAGS -trimpath -tags=netgo -ldflags="$UNTRUSTED_LDFLAGS" -mod=vendor -o "$UNTRUSTED_BINARY_NAME"
           pwd
           ls -l "$BUILDER_FOLDER"/build-go
+          echo ./"$BUILDER_FOLDER"/build-go/build-go ./releaser.yml "$BINARY_NAME" "$UNTRUSTED_ENVS"
           ./"$BUILDER_FOLDER"/build-go/build-go ./releaser.yml "$BINARY_NAME" "$UNTRUSTED_ENVS"
+          ls -l
           export DIGEST=$(sha256sum "$BINARY_NAME" | awk '{print $1}')
           # TODO: digest and names will be returned by the builder using info frm config file.
           echo "::set-output name=go-binary-name::$BINARY_NAME"
@@ -147,6 +149,7 @@ jobs:
           UNTRUSTED_BINARY_NAME: ${{ needs.build.outputs.go-binary-name }}
         # TODO: don't store secret in script, set as env variable instead
         run: |
+          set -e
           echo expected hash is $DIGEST
           export GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
           echo ./prov -repository ${{ github.repository }} -digest $DIGEST > att.provenance
@@ -169,6 +172,7 @@ jobs:
           # Note: binary name is not verified
           UNTRUSTED_BINARY_NAME: ${{ steps.build-gen.outputs.go-binary-name }}
         run: |
+          set -e
           echo cosign upload blob -f "$UNTRUSTED_BINARY_NAME" ghcr.io/asraa/slsa-github-demo
           echo cosign sign ghcr.io/asraa/slsa-github-demo
           echo cosign attest --predicate att.provenance ghcr.io/asraa/slsa-github-demo

@@ -114,7 +114,7 @@ func (b *GoBuild) SetOutputFilename(name string) error {
 }
 
 func (b *GoBuild) SetFlags(flags []string) error {
-	b.flags = []string{b.goc, "build", "-mod=vendor"}
+	b.flags = []string{b.goc, "build", "-mod=vendor", "-o", b.filename}
 
 	for _, v := range flags {
 		if !isAllowedArg(v) {
