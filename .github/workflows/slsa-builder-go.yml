@@ -7,6 +7,8 @@ env:
   GENERATED_BINARY: generated-go-binary
   #TODO: let caller upload ?
   REGISTRY: ghcr.io
+  BUILDER_URL: https://github.com/laurentsimon/slsa-on-github
+  BUILDER_FOLDER: builder
 
 ###################################################################
 #                                                                 #
@@ -73,7 +75,7 @@ jobs:
             pwd
             ls
             export OPWD="$PWD"
-            git clone https://github.com/laurentsimon/slsa-on-github
+            git clone "$BUILDER_URL" "$BUILDER_FOLDER"
             cd slsa-on-github
             git checkout feat/args2
             #git reset --hard $SHA1
@@ -92,7 +94,7 @@ jobs:
         # TODO: change directory using working-dir.
         run: |
           #go build $UNTRUSTED_FLAGS -trimpath -tags=netgo -ldflags="$UNTRUSTED_LDFLAGS" -mod=vendor -o "$UNTRUSTED_BINARY_NAME"
-          ./build-go/build-go ./releaser.yml "$UNTRUSTED_BINARY_NAME" "$UNTRUSTED_ENVS"
+          ."$BUILDER_FOLDER"/build-go/build-go ./releaser.yml "$UNTRUSTED_BINARY_NAME" "$UNTRUSTED_ENVS"
           export DIGEST=$(sha256sum "$UNTRUSTED_BINARY_NAME" | awk '{print $1}')
           echo "::set-output name=go-binary-name::$UNTRUSTED_BINARY_NAME"
           echo "::set-output name=go-binary-sha256::$DIGEST"
