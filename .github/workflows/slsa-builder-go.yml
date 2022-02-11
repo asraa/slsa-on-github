@@ -7,7 +7,14 @@ env:
   GENERATED_BINARY: generated-go-binary
   #TODO: let caller upload ?
   REGISTRY: ghcr.io
+  BUILDER_URL: https://github.com/asraa/slsa-on-github
+  BUILDER_FOLDER: builder
 
+###################################################################
+#                                                                 #
+#            Input and output argument definitions                #
+#                                                                 #
+###################################################################
 on:
   workflow_call:
     inputs:
@@ -15,8 +22,13 @@ on:
         description: "The go version to use"
         required: true
         type: string
-      working-dir:
-        description: "Working directory to build the binary"
+      upload-location:
+        description: "Upload registry location"
+        required: false
+        type: string
+        default: "$REGISTRY/${{ github.repository }}"
+      env:
+        description: "Env variables to pass to the builder"
         required: false
         type: string
     outputs:
@@ -46,35 +58,65 @@ jobs:
       # - name: Enable hermeticity
       # uses: slsa/hermeticity@xxx
       #   with:
-      #     to-state: enabled
+      #     to-state: disabled
 
       - name: Download dependencies
         shell: bash
         run: |
+          set -e
           go mod vendor
       
       # TODO(hermeticity)
       # - name: Disable hermeticity
       # uses: slsa/hermeticity@xxx
       #   with:
-      #     to-state: disabled
+      #     to-state: enabled
+
+      # TODO: download the compiled binary or publish a golang package
+      # or do a proper uses: checkout-then-cleanup
+      - name: Build builder
+        shell: bash
+        run: |
+            set -e
+            pwd
+            ls
+            export OPWD="$PWD"
+            git clone "$BUILDER_URL" "$BUILDER_FOLDER"
+            cd "$BUILDER_FOLDER"
+            #git checkout feat/args2
+            #git reset --hard $SHA1
+            cd build-go
+            go build
+            ls -al
+            cd "$OPWD"
 
       - name: Build project
         id: build-gen
         shell: bash
+        env:
+          BINARY_NAME: "${{ env.GENERATED_BINARY }}"
+          # Dummyjust ensures the value is never
+          UNTRUSTED_ENVS: "${{ inputs.env }}"
         # TODO: change directory using working-dir.
         run: |
-          go build -mod=vendor -o ${{ env.GENERATED_BINARY }}
-          export DIGEST=$(sha256sum ${{ env.GENERATED_BINARY }} | awk '{print $1}')
-          echo "::set-output name=go-binary-name::${{ env.GENERATED_BINARY }}"
+          set -e
+          #go build $UNTRUSTED_FLAGS -trimpath -tags=netgo -ldflags="$UNTRUSTED_LDFLAGS" -mod=vendor -o "$UNTRUSTED_BINARY_NAME"
+          pwd
+          ls -l "$BUILDER_FOLDER"/build-go
+          echo ./"$BUILDER_FOLDER"/build-go/build-go ./releaser.yml "$BINARY_NAME" "$UNTRUSTED_ENVS"
+          ./"$BUILDER_FOLDER"/build-go/build-go ./releaser.yml "$BINARY_NAME" "$UNTRUSTED_ENVS"
+          ls -l
+          export DIGEST=$(sha256sum "$BINARY_NAME" | awk '{print $1}')
+          # TODO: digest and names will be returned by the builder using info frm config file.
+          echo "::set-output name=go-binary-name::$BINARY_NAME"
           echo "::set-output name=go-binary-sha256::$DIGEST"
 
       #TODO(upload): verify how the action handles malicious names.
       - name: Upload the artifact
         uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 # v2.3.1
         with:
-          name: ${{ env.GENERATED_BINARY }}
-          path: ${{ env.GENERATED_BINARY }}
+          name: ${{ steps.build-gen.outputs.go-binary-name }}
+          path: ${{ steps.build-gen.outputs.go-binary-name }}
           retention-days: 5
 
   provenance:
@@ -92,21 +134,29 @@ jobs:
         with:
           repository: 'asraa/slsa-on-github'
       - uses: actions/setup-go@v2
-      - name: build provenance generator
-        run: go build -o prov ./cmd/main.go
+      # - name: build provenance generator
+      #   run: |
+      #     cd slsa-provenance/generator/
+      #     go build -o ../../prov ./cmd/main.go
+      #     cd
+      #     
 
       # Download build from previous job
       - uses: 'actions/download-artifact@v2'
         with:
-          name: ${{ env.GENERATED_BINARY }}
+          name: ${{ needs.build.outputs.go-binary-name }}
 
       - name: Generate provenance for build in previous job
         env:
           DIGEST: ${{ needs.build.outputs.go-binary-sha256 }}
+          UNTRUSTED_BINARY_NAME: ${{ needs.build.outputs.go-binary-name }}
+        # TODO: don't store secret in script, set as env variable instead
         run: |
+          set -e
           echo expected hash is $DIGEST
           export GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
           echo ./prov -repository ${{ github.repository }} -digest $DIGEST > att.provenance
+          cat att.provenance
           ls
       
       - name: Log in to the GitHub Container registry
@@ -122,7 +172,10 @@ jobs:
         id: cosignid
         env:
           COSIGN_EXPERIMENTAL: "true"
+          # Note: binary name is not verified
+          UNTRUSTED_BINARY_NAME: ${{ steps.build-gen.outputs.go-binary-name }}
         run: |
-          echo cosign upload blob -f ${{ env.GENERATED_BINARY }} ghcr.io/asraa/slsa-github-demo
+          set -e
+          echo cosign upload blob -f "$UNTRUSTED_BINARY_NAME" ghcr.io/asraa/slsa-github-demo
           echo cosign sign ghcr.io/asraa/slsa-github-demo
           echo cosign attest --predicate att.provenance ghcr.io/asraa/slsa-github-demo

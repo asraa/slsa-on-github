@@ -1,6 +1,6 @@
 module github.com/asraa/slsa-on-github/slsa-provenance/generator
 
-go 1.16
+go 1.17
 
 require (
 	github.com/google/go-github/v40 v40.0.0
