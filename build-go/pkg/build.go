@@ -17,6 +17,7 @@ var (
 	errorInvalidFilename           = errors.New("invalid filename")
 )
 
+// TODO: move to an allowedArgs list.
 var disallowedArgs = map[string]bool{
 	// Allows exucting another script/commmand on the machine.
 	"-toolexec": true,
