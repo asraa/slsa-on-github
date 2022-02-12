@@ -153,7 +153,7 @@ jobs:
           pwd
           ls -l
           echo "$BUILDER_BINARY" ./releaser.yml "$BINARY_NAME" "$UNTRUSTED_ENVS"
-          "$BUILDER_BINARY" ./releaser.yml "$BINARY_NAME" "$UNTRUSTED_ENVS"
+          ./"$BUILDER_BINARY" ./releaser.yml "$BINARY_NAME" "$UNTRUSTED_ENVS"
           ls -l
           export DIGEST=$(sha256sum "$BINARY_NAME" | awk '{print $1}')
           # TODO: digest and names will be returned by the builder using info frm config file.
