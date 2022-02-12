@@ -110,7 +110,7 @@ jobs:
           BUILDER_BINARY: "${{ env.BUILDER_BINARY }}"
         run: |
           set -euo pipefail
-          echo "hash of builder should be $BUILDER_HASH
+          echo "hash of builder should be $BUILDER_HASH"
           DIGEST=$(sha256sum "$BUILDER_BINARY" | awk '{print $1}')
           echo "hash computed is $DIGEST"
           #TODO: compare hashes and fail if they are different.
