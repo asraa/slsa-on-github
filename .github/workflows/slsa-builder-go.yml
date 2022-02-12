@@ -126,7 +126,7 @@ jobs:
           echo "hash computed is $COMPUTED_HASH"
 
           # Compare hashes. Explicit exit to be safe.
-          echo "20f670d4e8d95330e251d0c82ad569c7b2051bcf499396ed06197993afa96e9c $BUILDER_BINARY" | sha256sum --strict --check --status || exit -2
+          echo "20f670d4e8d95330e251d0c82ad569c7b2051bcf499396ed06197993afa96e9c" | sha256sum --strict --check --status || echo "invalid hash" && exit -2
     
           # Make the builder executable.
           chmod a+x "$BUILDER_BINARY"
@@ -150,10 +150,13 @@ jobs:
           BINARY_NAME: "${{ env.GENERATED_BINARY }}"
           BUILDER_BINARY: "${{ env.BUILDER_BINARY }}"
           UNTRUSTED_ENVS: "${{ inputs.env }}"
+          UNTRUSTED_WORKING_DIR: "${{ inputs.working-dir }}"
         # TODO: change directory using working-dir.
         run: |
           set -euo pipefail
 
+          # TODO: pass UNTRUSTED_WORKING_DIR to builder, which will use realpath()
+          # to compute the actual directory.
           echo "./$BUILDER_BINARY" ./releaser.yml "$BINARY_NAME" "$UNTRUSTED_ENVS"
           ./"$BUILDER_BINARY" ./releaser.yml "$BINARY_NAME" "$UNTRUSTED_ENVS"
 
