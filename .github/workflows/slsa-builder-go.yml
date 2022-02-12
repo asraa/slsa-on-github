@@ -73,7 +73,7 @@ jobs:
       - name: Build builder
         shell: bash
         id: builder-gen
-        end:
+        env:
           BUILDER_BINARY: "${{ env.BUILDER_BINARY }}"
         run: |
             set -euo pipefail
