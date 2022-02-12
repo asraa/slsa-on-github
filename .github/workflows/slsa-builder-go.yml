@@ -125,8 +125,8 @@ jobs:
           COMPUTED_HASH=$(sha256sum "$BUILDER_BINARY" | awk '{print $1}')
           echo "hash computed is $COMPUTED_HASH"
 
-          # Compare hashes. Explicit exit to be safe.
-          echo "$COMPUTED_HASH $BUILDER_BINARY" | sha256sum --strict --check --status || echo "invalid builder hash" && exit -2
+          # Compare hashes. Explicit removal of builder and exit to be safe.
+          echo "$COMPUTED_HASH $BUILDER_BINARY" | sha256sum --strict --check --status || exit -2
     
           # Make the builder executable.
           chmod a+x "$BUILDER_BINARY"
