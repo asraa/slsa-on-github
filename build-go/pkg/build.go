@@ -115,9 +115,8 @@ func (b *GoBuild) SetOutputFilename(name string) error {
 	return nil
 }
 
-// TODO: set -x flag to display the command used.
 func (b *GoBuild) SetFlags(flags []string) error {
-	b.flags = []string{b.goc, "build", "-mod=vendor", "-o", b.filename}
+	b.flags = []string{b.goc, "build", "-x", "-mod=vendor", "-o", b.filename}
 
 	for _, v := range flags {
 		if !isAllowedArg(v) {
