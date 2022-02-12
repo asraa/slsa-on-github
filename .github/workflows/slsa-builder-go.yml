@@ -73,15 +73,17 @@ jobs:
       - name: Build builder
         shell: bash
         id: builder-gen
+        end:
+          BUILDER_BINARY: "${{ env.BUILDER_BINARY }}"
         run: |
             set -euo pipefail
             cd build-go
             # https://go.dev/ref/mod#build-commands.
-            go build -mod=vendor -o "${{ env.BUILDER_BINARY }}"
-            BUILDER_DIGEST=$(sha256sum "${{ env.BUILDER_BINARY }}" | awk '{print $1}')
+            go build -mod=vendor -o "$BUILDER_BINARY"
+            BUILDER_DIGEST=$(sha256sum "$BUILDER_BINARY" | awk '{print $1}')
             echo "::set-output name=go-builder-sha256::$BUILDER_DIGEST"
             pwd
-            echo "${{ env.BUILDER_BINARY }} -> $BUILDER_DIGEST"
+            echo "$BUILDER_BINARY -> $BUILDER_DIGEST"
 
       - name: Upload the builder
         uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 # v2.3.1
@@ -105,10 +107,11 @@ jobs:
       - name: Verify builder
         env:
           BUILDER_HASH: "${{ needs.builder.outputs.go-builder-sha256 }}"
+          BUILDER_BINARY: "${{ env.BUILDER_BINARY }}"
         run: |
           set -euo pipefail
-          echo "hash of builder should be "$BUILDER_HASH"
-          DIGEST=$(sha256sum "${{ env.BUILDER_BINARY }}" | awk '{print $1}')
+          echo "hash of builder should be $BUILDER_HASH
+          DIGEST=$(sha256sum "$BUILDER_BINARY" | awk '{print $1}')
           echo "hash computed is $DIGEST"
           #TODO: compare hashes and fail if they are different.
 
@@ -141,6 +144,7 @@ jobs:
         shell: bash
         env:
           BINARY_NAME: "${{ env.GENERATED_BINARY }}"
+          BUILDER_BINARY: "${{ env.BUILDER_BINARY }}"
           UNTRUSTED_ENVS: "${{ inputs.env }}"
         # TODO: change directory using working-dir.
         run: |
@@ -148,8 +152,8 @@ jobs:
           #go build $UNTRUSTED_FLAGS -trimpath -tags=netgo -ldflags="$UNTRUSTED_LDFLAGS" -mod=vendor -o "$UNTRUSTED_BINARY_NAME"
           pwd
           ls -l
-          echo "${{ env.BUILDER_BINARY }}Y" ./releaser.yml "$BINARY_NAME" "$UNTRUSTED_ENVS"
-          "${{ env.BUILDER_BINARY }}" ./releaser.yml "$BINARY_NAME" "$UNTRUSTED_ENVS"
+          echo "$BUILDER_BINARY" ./releaser.yml "$BINARY_NAME" "$UNTRUSTED_ENVS"
+          "$BUILDER_BINARY" ./releaser.yml "$BINARY_NAME" "$UNTRUSTED_ENVS"
           ls -l
           export DIGEST=$(sha256sum "$BINARY_NAME" | awk '{print $1}')
           # TODO: digest and names will be returned by the builder using info frm config file.
