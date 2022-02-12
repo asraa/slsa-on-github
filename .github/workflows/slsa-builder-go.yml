@@ -59,9 +59,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ls
-          go version
+          #TODO(reproducible)
+          cd build-go
           go mod vendor
+          cd -
 
       # TODO(hermeticity) OS-level.
       # - name: Disable hermeticity
