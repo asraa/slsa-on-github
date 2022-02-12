@@ -98,6 +98,18 @@ jobs:
     runs-on: ubuntu-latest
     needs: builder
     steps:
+      - name: Checkout the repository
+        uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 # v2.3.4
+        with:
+          fetch-depth: 0
+
+      # Code needed (not tested) if go-vesion is made optional.
+      # See https://stackoverflow.com/questions/67368005/check-whether-environment-variable-is-empty.
+      - name: Set up golang environment
+        uses: actions/setup-go@424fc82d43fa5a37540bae62709ddcc23d9520d4 # v2.1.3
+        with:
+          go-version: ${{ inputs.go-version }}
+
       - name: Download builder
         uses: 'actions/download-artifact@v2'
         with:
@@ -115,18 +127,6 @@ jobs:
           pwd
           ls
           #TODO: compare hashes and fail if they are different.
-
-      - name: Checkout the repository
-        uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 # v2.3.4
-        with:
-          fetch-depth: 0
-
-      # Code needed (not tested) if go-vesion is made optional.
-      # See https://stackoverflow.com/questions/67368005/check-whether-environment-variable-is-empty.
-      - name: Set up golang environment
-        uses: actions/setup-go@424fc82d43fa5a37540bae62709ddcc23d9520d4 # v2.1.3
-        with:
-          go-version: ${{ inputs.go-version }}
 
       - name: Download dependencies
         shell: bash
@@ -153,7 +153,7 @@ jobs:
           #go build $UNTRUSTED_FLAGS -trimpath -tags=netgo -ldflags="$UNTRUSTED_LDFLAGS" -mod=vendor -o "$UNTRUSTED_BINARY_NAME"
           pwd
           ls -l
-          echo "$BUILDER_BINARY" ./releaser.yml "$BINARY_NAME" "$UNTRUSTED_ENVS"
+          echo "./$BUILDER_BINARY" ./releaser.yml "$BINARY_NAME" "$UNTRUSTED_ENVS"
           ./"$BUILDER_BINARY" ./releaser.yml "$BINARY_NAME" "$UNTRUSTED_ENVS"
           ls -l
           export DIGEST=$(sha256sum "$BINARY_NAME" | awk '{print $1}')
