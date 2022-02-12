@@ -125,10 +125,11 @@ jobs:
           COMPUTED_HASH=$(sha256sum "$BUILDER_BINARY" | awk '{print $1}')
           echo "hash computed is $COMPUTED_HASH"
 
-          echo "20f670d4e8d95330e251d0c82ad569c7b2051bcf499396ed06197993afa96e9c $BUILDER_BINARY" | sha256sum --strict --check --status
-          echo "passed"
+          # Compare hashes. Explicit exit to be safe.
+          echo "20f670d4e8d95330e251d0c82ad569c7b2051bcf499396ed06197993afa96e9c $BUILDER_BINARY" | sha256sum --strict --check --status || exit -2
+    
+          # Make the builder executable.
           chmod a+x "$BUILDER_BINARY"
-          #TODO: compare hashes and fail if they are different.
 
       - name: Download dependencies
         shell: bash
