@@ -108,7 +108,7 @@ jobs:
         run: |
           set -euo pipefail
           go mod vendor
-      
+
       - name: Download builder
         uses: 'actions/download-artifact@v2'
           name: ${{ needs.build.outputs.go-builder-sha256 }}
