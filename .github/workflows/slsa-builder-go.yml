@@ -126,7 +126,7 @@ jobs:
           echo "hash computed is $COMPUTED_HASH"
 
           # Compare hashes. Explicit exit to be safe.
-          echo "20f670d4e8d95330e251d0c82ad569c7b2051bcf499396ed06197993afa96e9c" | sha256sum --strict --check --status || echo "invalid hash" && exit -2
+          echo "$20f670d4e8d95330e251d0c82ad569c7b2051bcf499396ed06197993afa96e9c $BUILDER_BINARY" | sha256sum --strict --check --status || echo "invalid hash" && exit -2
     
           # Make the builder executable.
           chmod a+x "$BUILDER_BINARY"
