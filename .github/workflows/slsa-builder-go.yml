@@ -10,7 +10,6 @@ env:
   BUILDER_BINARY: builder
   BUILDER_REPOSITORY: laurentsimon/slsa-on-github
   BUILDER_REF: feat/herm
-  BUILDER_URL: https://github.com/"$BUILDER_REPOSITORY"
 
 ###################################################################
 #                                                                 #
@@ -60,6 +59,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          ls
+          go version
           go mod vendor
 
       # TODO(hermeticity) OS-level.
