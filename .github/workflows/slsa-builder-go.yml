@@ -122,11 +122,12 @@ jobs:
         run: |
           set -euo pipefail
           echo "hash of builder should be $BUILDER_HASH"
-          DIGEST=$(sha256sum "$BUILDER_BINARY" | awk '{print $1}')
-          echo "hash computed is $DIGEST"
-          pwd
+          COMPUTED_HASH=$(sha256sum "$BUILDER_BINARY" | awk '{print $1}')
+          echo "hash computed is $COMPUTED_HASH"
+
+          echo "$COMPUTED_HASH" | sha256sum --status --strict --check <(echo "$BUILDER_HASH"  -)
+          echo "passed"
           chmod a+x "$BUILDER_BINARY"
-          ls -l
           #TODO: compare hashes and fail if they are different.
 
       - name: Download dependencies
@@ -151,14 +152,12 @@ jobs:
         # TODO: change directory using working-dir.
         run: |
           set -euo pipefail
-          #go build $UNTRUSTED_FLAGS -trimpath -tags=netgo -ldflags="$UNTRUSTED_LDFLAGS" -mod=vendor -o "$UNTRUSTED_BINARY_NAME"
-          pwd
-          ls -l
+
           echo "./$BUILDER_BINARY" ./releaser.yml "$BINARY_NAME" "$UNTRUSTED_ENVS"
           ./"$BUILDER_BINARY" ./releaser.yml "$BINARY_NAME" "$UNTRUSTED_ENVS"
-          ls -l
-          export DIGEST=$(sha256sum "$BINARY_NAME" | awk '{print $1}')
+
           # TODO: digest and names will be returned by the builder using info from config file.
+          DIGEST=$(sha256sum "$BINARY_NAME" | awk '{print $1}')
           echo "::set-output name=go-binary-name::$BINARY_NAME"
           echo "::set-output name=go-binary-sha256::$DIGEST"
 
