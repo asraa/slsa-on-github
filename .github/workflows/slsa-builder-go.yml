@@ -80,12 +80,14 @@ jobs:
             go build -mod=vendor -o "${{ env.BUILDER_BINARY }}"
             BUILDER_DIGEST=$(sha256sum "${{ env.BUILDER_BINARY }}" | awk '{print $1}')
             echo "::set-output name=go-builder-sha256::$BUILDER_DIGEST"
+            pwd
+            echo "${{ env.BUILDER_BINARY }} -> $BUILDER_DIGEST"
 
       - name: Upload the builder
         uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 # v2.3.1
         with:
-          name: ${{ steps.builder-gen.outputs.go-builder-sha256 }}
-          path: "${{ env.BUILDER_BINARY }}"
+          name: "${{ env.BUILDER_BINARY }}"
+          path: "build-go/${{ env.BUILDER_BINARY }}"
           retention-days: 5
 
   build:
