@@ -35,17 +35,8 @@ func main() {
 	err = gobuild.SetOutputFilename(os.Args[2])
 	check(err)
 
-	// Set env variables.
-	// Note: This MUST be called before SetLdflags().
-	err = gobuild.SetEnvVariables(os.Args[3])
-	check(err)
-
-	// Set flags.
-	err = gobuild.SetFlags(cfg.Flags)
-	check(err)
-
-	// Set ldflags.
-	err = gobuild.SetLdflags(cfg.Ldflags)
+	// Set env variables encoded as arguments.
+	err = gobuild.SetArgEnvVariables(os.Args[3])
 	check(err)
 
 	err = gobuild.Run()

@@ -15,69 +15,114 @@ var (
 	errorInvalidEnvArgument        = errors.New("invalid env passed via argument")
 	errorEnvVariableNameNotAllowed = errors.New("env variable not allowed")
 	errorInvalidFilename           = errors.New("invalid filename")
+	errEmptyFilename               = errors.New("filename is not set")
 )
 
-// TODO: move to an allowedArgs list.
-var disallowedArgs = map[string]bool{
-	// Allows exucting another script/commmand on the machine.
-	"-toolexec": true,
-	// Allows overwriting existing files on the machine.
-	"-o": true,
-	// Allows turning off vendoring/hermeticity.
-	// See https://golang.org/ref/mod#build-commands.
-	"-mod=": true,
+// See `go build help`.
+// `-asmflags`, `-n`, `-mod`, `-installsuffix`, `-modfile`,
+// `-workfile`, `-overlay`, `-pkgdir`, `-toolexec`, `-o`,
+// `-modcacherw` not in list for now.
+
+var allowedBuildArgs = map[string]bool{
+	"-a": true, "-race": true, "-msan": true, "-asan": true,
+	"-v": true, "-work": true, "-x": true, "-buildinfo": true,
+	"-buildmode": true, "-buildvcs": true, "-compiler": true,
+	"-gccgoflags": true, "-gcflags": true,
+	"-ldflags": true, "-linkshared": true, "-mod": true,
+	"-tags": true, "-trimpath": true,
+}
+
+var allowedEnvVariablePrefix = map[string]bool{
+	"GO": true, "CGO_": true,
 }
 
 type GoBuild struct {
-	cfg      *GoReleaserConfig
-	goc      string
-	flags    []string
+	cfg *GoReleaserConfig
+	goc string
+	// flags []string
+	// Env variable passed via workflow, which are dynamically computed.
+	// Static env variables are contained in cfg.Env.
+	argEnv   map[string]string
 	ldflags  string
 	filename string
 }
 
 func GoBuildNew(goc string, cfg *GoReleaserConfig) *GoBuild {
 	c := GoBuild{
-		cfg: cfg,
-		goc: goc,
+		cfg:    cfg,
+		goc:    goc,
+		argEnv: make(map[string]string),
 	}
+
 	return &c
 }
 
 func (b *GoBuild) Run() error {
-	flags := b.flags
-	if len(b.ldflags) > 0 {
-		flags = append(flags, "-ldflags", b.ldflags)
+	// Set flags.
+	flags, err := b.generateFlags()
+	if err != nil {
+		return err
 	}
 
-	return syscall.Exec(b.goc, flags, os.Environ())
+	// Generate env variables.
+	envs, err := b.generateEnvVariables()
+	if err != nil {
+		return err
+	}
+
+	// Generate ldflags.
+	ldflags, err := b.generateLdflags()
+	if err != nil {
+		return err
+	}
+
+	// Add ldflags.
+	if len(ldflags) > 0 {
+		flags = append(flags, fmt.Sprintf("-ldflags=%s", ldflags))
+	}
+
+	// Set filename as last argument.
+	if b.filename == "" {
+		return errEmptyFilename
+	}
+	flags = append(flags, []string{"-o", b.filename}...)
+
+	return syscall.Exec(b.goc, flags, envs)
 }
 
-func (b *GoBuild) SetEnvVariables(envs string) error {
-	if err := os.Setenv("GOOS", b.cfg.Goos); err != nil {
-		return fmt.Errorf("os.Setenv: %w", err)
-	}
+func (b *GoBuild) generateEnvVariables() ([]string, error) {
+	env := os.Environ()
 
-	if err := os.Setenv("GOARCH", b.cfg.Goarch); err != nil {
-		return fmt.Errorf("os.Setenv: %w", err)
+	if b.cfg.Goos == "" {
+		return nil, fmt.Errorf("%w: %s", errorEnvVariableNameEmpty, "GOOS")
 	}
+	env = append(env, fmt.Sprintf("GOOS=%s", b.cfg.Goos))
 
-	ees := os.Environ()
+	if b.cfg.Goarch == "" {
+		return nil, fmt.Errorf("%w: %s", errorEnvVariableNameEmpty, "GOARCH")
+	}
+	env = append(env, fmt.Sprintf("GOARCH=%s", b.cfg.Goarch))
+
+	// Set env variables from config file.
 	for k, v := range b.cfg.Env {
-		if !isAllowedEnvVariable(k, ees) {
-			return fmt.Errorf("%w: %s", errorEnvVariableNameNotAllowed, v)
+		if !isAllowedEnvVariable(k) {
+			return env, fmt.Errorf("%w: %s", errorEnvVariableNameNotAllowed, v)
 		}
 
-		if err := os.Setenv(k, v); err != nil {
-			return fmt.Errorf("os.Setenv: %w", err)
-		}
+		env = append(env, fmt.Sprintf("%s=%s", k, v))
 	}
 
-	// Add additional environment variables encoded as argument.
-	// I've tried running the re-usable workflow in a step
+	return env, nil
+}
+
+func (b *GoBuild) SetArgEnvVariables(envs string) error {
+	// Notes:
+	// - I've tried running the re-usable workflow in a step
 	// and set the env variable in a previous step, but found that a re-usable workflow is not
 	// allowed to run in a step; they have to run as `job.uses`. Using `job.env` with `job.uses`
-	// is not allowed. So for now we need this additional variable.
+	// is not allowed.
+	// - We don't want to allow env variables set in the workflow because of injections
+	// e.g. LD_PRELOAD, etc.
 	for _, e := range strings.Split(envs, ",") {
 		s := strings.Trim(e, " ")
 		if len(s) == 0 {
@@ -89,14 +134,10 @@ func (b *GoBuild) SetEnvVariables(envs string) error {
 		}
 		name := strings.Trim(sp[0], " ")
 		value := strings.Trim(sp[1], " ")
-		if !isAllowedEnvVariable(name, ees) {
-			return fmt.Errorf("%w: %s", errorEnvVariableNameNotAllowed, name)
-		}
 
 		fmt.Printf("arg env: %s:%s\n", name, value)
-		if err := os.Setenv(name, value); err != nil {
-			return fmt.Errorf("os.Setenv: %w", err)
-		}
+		b.argEnv[name] = value
+
 	}
 	return nil
 }
@@ -115,60 +156,59 @@ func (b *GoBuild) SetOutputFilename(name string) error {
 	return nil
 }
 
-func (b *GoBuild) SetFlags(flags []string) error {
-	b.flags = []string{b.goc, "build", "-x", "-mod=vendor", "-o", b.filename}
+func (b *GoBuild) generateFlags() ([]string, error) {
+	// -x
+	flags := []string{b.goc, "build", "-mod=vendor"}
 
-	for _, v := range flags {
+	for _, v := range b.cfg.Flags {
 		if !isAllowedArg(v) {
-			return fmt.Errorf("%w: %s", errorUnsupportedArguments, v)
+			return nil, fmt.Errorf("%w: %s", errorUnsupportedArguments, v)
 		}
-		b.flags = append(b.flags, v)
+		flags = append(flags, v)
 
 	}
-	return nil
+	return flags, nil
 }
 
 func isAllowedArg(arg string) bool {
-	for k, _ := range disallowedArgs {
-		// TODO: use strings.HasPrefix with allowedList?
-		if strings.Contains(arg, k) {
-			return false
+	for k, _ := range allowedBuildArgs {
+		if strings.HasPrefix(arg, k) {
+			return true
 		}
 	}
-	return true
+	return false
 }
 
-// Check if the env variable the use wants to set already exists
-// Note: Probably we would relax this in practice, and maybe specifically
-// look for some names like PATH.
-func isAllowedEnvVariable(name string, disallowedEnvs []string) bool {
-	for _, e := range disallowedEnvs {
-		v := strings.Trim(e, " ")
-		if strings.HasPrefix(v, fmt.Sprintf("%s=", name)) {
-			return false
+// Check if the env variable is allowed. We want to avoid
+// variable injection, e.g. LD_PRELOAD, etc.
+// See an overview in https://www.hale-legacy.com/class/security/s20/handout/slides-env-vars.pdf.
+func isAllowedEnvVariable(name string) bool {
+	for k, _ := range allowedEnvVariablePrefix {
+		if strings.HasPrefix(name, k) {
+			return true
 		}
 	}
-	return true
+	return false
 }
 
 // TODO: maybe not needed if handled directly by go compiler.
-func (b *GoBuild) SetLdflags(ldflags []string) error {
+func (b *GoBuild) generateLdflags() (string, error) {
 	var a []string
 	regex := regexp.MustCompile(`{{\s*\.Env\.(.*)\s*}}`)
 
-	for _, v := range ldflags {
+	for _, v := range b.cfg.Ldflags {
 		var res string
 		m := regex.FindStringSubmatch(v)
 		// fmt.Println("match", m[1])
 		if len(m) > 2 {
-			return fmt.Errorf("%w: %s", errorEnvVariableNameEmpty, v)
+			return "", fmt.Errorf("%w: %s", errorEnvVariableNameEmpty, v)
 		}
 		if len(m) == 2 {
 			name := strings.Trim(m[1], " ")
 
-			val, exists := os.LookupEnv(name)
+			val, exists := b.argEnv[name]
 			if !exists {
-				return fmt.Errorf("%w: %s", errorEnvVariableNameEmpty, name)
+				return "", fmt.Errorf("%w: %s", errorEnvVariableNameEmpty, name)
 			}
 			res = val
 		} else {
@@ -177,7 +217,8 @@ func (b *GoBuild) SetLdflags(ldflags []string) error {
 		a = append(a, res)
 	}
 	if len(a) > 0 {
-		b.ldflags = fmt.Sprintf("'%s'", strings.Join(a, " "))
+		return fmt.Sprintf("%s", strings.Join(a, " ")), nil
 	}
-	return nil
+
+	return "", nil
 }
