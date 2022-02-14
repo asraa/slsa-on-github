@@ -7,8 +7,9 @@ env:
   GENERATED_BINARY: generated-go-binary
   #TODO: let caller upload ?
   REGISTRY: ghcr.io
-  BUILDER_URL: https://github.com/asraa/slsa-on-github
-  BUILDER_FOLDER: builder
+  BUILDER_BINARY: builder
+  BUILDER_REPOSITORY: asraa/slsa-on-github
+  BUILDER_REF: main
 
 ###################################################################
 #                                                                 #
@@ -37,78 +38,131 @@ on:
         value: ${{ jobs.build.outputs.go-binary-name }}
 
 jobs:
-  build:
+  builder:
     outputs:
-      go-binary-sha256: ${{ steps.build-gen.outputs.go-binary-sha256 }}
-      go-binary-name: ${{ steps.build-gen.outputs.go-binary-name }}
+      go-builder-sha256: ${{ steps.builder-gen.outputs.go-builder-sha256 }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the repository
         uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 # v2.3.4
         with:
           fetch-depth: 0
+          repository: "${{ env.BUILDER_REPOSITORY }}"
+          ref: "${{ env.BUILDER_REF }}"
+
+      - name: Set up golang environment
+        uses: actions/setup-go@424fc82d43fa5a37540bae62709ddcc23d9520d4 # v2.1.3
+        with:
+          go-version: 1.17
+
+      - name: Download dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          #TODO(reproducible)
+          cd build-go
+          go mod vendor
+          cd -
+
+      # TODO(hermeticity) OS-level.
+      # - name: Disable hermeticity
+      # uses: slsa/hermeticity@xxx
+      #   with:
+      #     to-state: enabled
+
+      - name: Build builder
+        shell: bash
+        id: builder-gen
+        env:
+          BUILDER_BINARY: "${{ env.BUILDER_BINARY }}"
+        run: |
+            set -euo pipefail
+            cd build-go
+            # https://go.dev/ref/mod#build-commands.
+            go build -mod=vendor -o "$BUILDER_BINARY"
+            BUILDER_DIGEST=$(sha256sum "$BUILDER_BINARY" | awk '{print $1}')
+            echo "::set-output name=go-builder-sha256::$BUILDER_DIGEST"
+            echo "hash of $BUILDER_BINARY is $BUILDER_DIGEST"
+
+      - name: Upload the builder
+        uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 # v2.3.1
+        with:
+          name: "${{ env.BUILDER_BINARY }}"
+          path: "build-go/${{ env.BUILDER_BINARY }}"
+          retention-days: 5
+
+  build:
+    outputs:
+      go-binary-sha256: ${{ steps.build-gen.outputs.go-binary-sha256 }}
+      go-binary-name: ${{ steps.build-gen.outputs.go-binary-name }}
+    runs-on: ubuntu-latest
+    needs: builder
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 # v2.3.4
+        with:
+          fetch-depth: 0
+
       # Code needed (not tested) if go-vesion is made optional.
       # See https://stackoverflow.com/questions/67368005/check-whether-environment-variable-is-empty.
       - name: Set up golang environment
         uses: actions/setup-go@424fc82d43fa5a37540bae62709ddcc23d9520d4 # v2.1.3
         with:
           go-version: ${{ inputs.go-version }}
-      
-      # TODO(hermeticity)
-      # - name: Enable hermeticity
-      # uses: slsa/hermeticity@xxx
-      #   with:
-      #     to-state: disabled
+
+      - name: Download builder
+        uses: actions/download-artifact@v2
+        with:
+          name: "${{ env.BUILDER_BINARY }}"
+
+      - name: Verify builder
+        env:
+          BUILDER_HASH: "${{ needs.builder.outputs.go-builder-sha256 }}"
+          BUILDER_BINARY: "${{ env.BUILDER_BINARY }}"
+        run: |
+          set -euo pipefail
+          echo "hash of builder should be $BUILDER_HASH"
+          COMPUTED_HASH=$(sha256sum "$BUILDER_BINARY" | awk '{print $1}')
+          echo "hash computed is $COMPUTED_HASH"
+
+          # Compare hashes. Explicit exit to be safe.
+          # TODO: remove the builder as well.
+          echo "$COMPUTED_HASH $BUILDER_BINARY" | sha256sum --strict --check --status || exit -2
+    
+          # Make the builder executable.
+          chmod a+x "$BUILDER_BINARY"
 
       - name: Download dependencies
         shell: bash
         run: |
-          set -e
+          set -euo pipefail
           go mod vendor
-      
-      # TODO(hermeticity)
+
+      # TODO(hermeticity) OS-level.
       # - name: Disable hermeticity
       # uses: slsa/hermeticity@xxx
       #   with:
       #     to-state: enabled
 
-      # TODO: download the compiled binary or publish a golang package
-      # or do a proper uses: checkout-then-cleanup
-      - name: Build builder
-        shell: bash
-        run: |
-            set -e
-            pwd
-            ls
-            export OPWD="$PWD"
-            git clone "$BUILDER_URL" "$BUILDER_FOLDER"
-            cd "$BUILDER_FOLDER"
-            #git checkout feat/args2
-            #git reset --hard $SHA1
-            cd build-go
-            go build
-            ls -al
-            cd "$OPWD"
-
       - name: Build project
         id: build-gen
         shell: bash
         env:
-          BINARY_NAME: "${{ env.GENERATED_BINARY }}"
-          # Dummyjust ensures the value is never
+          UNTRUSTED_BINARY_NAME: "${{ env.GENERATED_BINARY }}"
+          BUILDER_BINARY: "${{ env.BUILDER_BINARY }}"
           UNTRUSTED_ENVS: "${{ inputs.env }}"
-        # TODO: change directory using working-dir.
+          UNTRUSTED_WORKING_DIR: "${{ inputs.working-dir }}"
         run: |
-          set -e
-          #go build $UNTRUSTED_FLAGS -trimpath -tags=netgo -ldflags="$UNTRUSTED_LDFLAGS" -mod=vendor -o "$UNTRUSTED_BINARY_NAME"
-          pwd
-          ls -l "$BUILDER_FOLDER"/build-go
-          echo ./"$BUILDER_FOLDER"/build-go/build-go ./releaser.yml "$BINARY_NAME" "$UNTRUSTED_ENVS"
-          ./"$BUILDER_FOLDER"/build-go/build-go ./releaser.yml "$BINARY_NAME" "$UNTRUSTED_ENVS"
-          ls -l
-          export DIGEST=$(sha256sum "$BINARY_NAME" | awk '{print $1}')
-          # TODO: digest and names will be returned by the builder using info frm config file.
-          echo "::set-output name=go-binary-name::$BINARY_NAME"
+          set -euo pipefail
+
+          # TODO: pass UNTRUSTED_WORKING_DIR to builder, which will use realpath()
+          # to compute the actual directory.
+          echo "./$BUILDER_BINARY" ./releaser.yml "$UNTRUSTED_BINARY_NAME" "$UNTRUSTED_ENVS"
+          ./"$BUILDER_BINARY" ./releaser.yml "$UNTRUSTED_BINARY_NAME" "$UNTRUSTED_ENVS"
+
+          # TODO: digest and names will be returned by the builder using info from config file.
+          DIGEST=$(sha256sum "$UNTRUSTED_BINARY_NAME" | awk '{print $1}')
+          echo "::set-output name=go-binary-name::$UNTRUSTED_BINARY_NAME"
           echo "::set-output name=go-binary-sha256::$DIGEST"
 
       #TODO(upload): verify how the action handles malicious names.
@@ -152,7 +206,7 @@ jobs:
           UNTRUSTED_BINARY_NAME: ${{ needs.build.outputs.go-binary-name }}
         # TODO: don't store secret in script, set as env variable instead
         run: |
-          set -e
+          set -euo pipefail
           echo expected hash is $DIGEST
           export GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
           echo ./prov -repository ${{ github.repository }} -digest $DIGEST > att.provenance
@@ -175,7 +229,7 @@ jobs:
           # Note: binary name is not verified
           UNTRUSTED_BINARY_NAME: ${{ steps.build-gen.outputs.go-binary-name }}
         run: |
-          set -e
+          set -euo pipefail
           echo cosign upload blob -f "$UNTRUSTED_BINARY_NAME" ghcr.io/asraa/slsa-github-demo
           echo cosign sign ghcr.io/asraa/slsa-github-demo
           echo cosign attest --predicate att.provenance ghcr.io/asraa/slsa-github-demo
