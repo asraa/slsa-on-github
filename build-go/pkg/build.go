@@ -21,11 +21,11 @@ var (
 // See `go build help`.
 // `-asmflags`, `-n`, `-mod`, `-installsuffix`, `-modfile`,
 // `-workfile`, `-overlay`, `-pkgdir`, `-toolexec`, `-o`,
-// `-modcacherw` not in list for now.
+// `-modcacherw`, `-work` not supported for now.
 
 var allowedBuildArgs = map[string]bool{
 	"-a": true, "-race": true, "-msan": true, "-asan": true,
-	"-v": true, "-work": true, "-x": true, "-buildinfo": true,
+	"-v": true, "-x": true, "-buildinfo": true,
 	"-buildmode": true, "-buildvcs": true, "-compiler": true,
 	"-gccgoflags": true, "-gcflags": true,
 	"-ldflags": true, "-linkshared": true, "-mod": true,
@@ -39,9 +39,7 @@ var allowedEnvVariablePrefix = map[string]bool{
 type GoBuild struct {
 	cfg *GoReleaserConfig
 	goc string
-	// flags []string
-	// Env variable passed via workflow, which are dynamically computed.
-	// Static env variables are contained in cfg.Env.
+	// Note: static env variables are contained in cfg.Env.
 	argEnv   map[string]string
 	ldflags  string
 	filename string
@@ -86,8 +84,7 @@ func (b *GoBuild) Run() error {
 		return errEmptyFilename
 	}
 	flags = append(flags, []string{"-o", b.filename}...)
-	fmt.Println(flags)
-	fmt.Println(envs)
+
 	return syscall.Exec(b.goc, flags, envs)
 }
 
