@@ -86,7 +86,8 @@ func (b *GoBuild) Run() error {
 		return errEmptyFilename
 	}
 	flags = append(flags, []string{"-o", b.filename}...)
-
+	fmt.Println(flags)
+	fmt.Println(envs)
 	return syscall.Exec(b.goc, flags, envs)
 }
 
