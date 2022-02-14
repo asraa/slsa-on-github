@@ -200,13 +200,12 @@ func (b *GoBuild) generateLdflags() (string, error) {
 	for _, v := range b.cfg.Ldflags {
 		var res string
 		m := regex.FindStringSubmatch(v)
-		// fmt.Println("match", m[1])
+		fmt.Println("match", m[1])
 		if len(m) > 2 {
 			return "", fmt.Errorf("%w: %s", errorEnvVariableNameEmpty, v)
 		}
 		if len(m) == 2 {
 			name := strings.Trim(m[1], " ")
-
 			val, exists := b.argEnv[name]
 			if !exists {
 				return "", fmt.Errorf("%w: %s", errorEnvVariableNameEmpty, name)
