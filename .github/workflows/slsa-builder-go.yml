@@ -9,7 +9,7 @@ env:
   REGISTRY: ghcr.io
   BUILDER_BINARY: builder
   BUILDER_REPOSITORY: laurentsimon/slsa-on-github
-  BUILDER_REF: main
+  BUILDER_REF: feat/argfilter
 
 ###################################################################
 #                                                                 #
