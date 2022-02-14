@@ -8,7 +8,7 @@ env:
   #TODO: let caller upload ?
   REGISTRY: ghcr.io
   BUILDER_BINARY: builder
-  BUILDER_REPOSITORY: asraa/slsa-on-github
+  BUILDER_REPOSITORY: laurentsimon/slsa-on-github
   BUILDER_REF: main
 
 ###################################################################
