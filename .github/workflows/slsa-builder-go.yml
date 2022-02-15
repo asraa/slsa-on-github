@@ -208,6 +208,7 @@ jobs:
           echo "::set-output name=go-binary-sha256::$DIGEST"
 
           # Get provenance
+          ./"$PROVENANCE_BINARY" 
           # echo "GITHUB_CONTEXT=${{ toJSON(github) }} ./$PROVENANCE_BINARY"
           export GITHUB_CONTEXT=${{ toJSON(github) }}
           ./"$PROVENANCE_BINARY" 
