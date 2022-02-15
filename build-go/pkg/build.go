@@ -40,9 +40,8 @@ type GoBuild struct {
 	cfg *GoReleaserConfig
 	goc string
 	// Note: static env variables are contained in cfg.Env.
-	argEnv   map[string]string
-	ldflags  string
-	filename string
+	argEnv  map[string]string
+	ldflags string
 }
 
 func GoBuildNew(goc string, cfg *GoReleaserConfig) *GoBuild {
@@ -80,11 +79,13 @@ func (b *GoBuild) Run() error {
 	}
 
 	// Set filename as last argument.
-	if b.filename == "" {
-		return errEmptyFilename
+	filename, err := b.generateOutputFilename()
+	if err != nil {
+		return err
 	}
-	flags = append(flags, []string{"-o", b.filename}...)
+	flags = append(flags, []string{"-o", filename}...)
 
+	fmt.Printf("::set-output name=go-binary-name::%s\n", filename)
 	return syscall.Exec(b.goc, flags, envs)
 }
 
@@ -140,18 +141,33 @@ func (b *GoBuild) SetArgEnvVariables(envs string) error {
 	return nil
 }
 
-func (b *GoBuild) SetOutputFilename(name string) error {
+func (b *GoBuild) generateOutputFilename() (string, error) {
 	const alpha = "abcdefghijklmnopqrstuvwxyz1234567890-_"
 
+	var name string
+
+	// Replace .Os variable.
+	if strings.Contains(b.cfg.Binary, "{{ .OS }}") && b.cfg.Goos == "" {
+		return "", fmt.Errorf("%w", errorEnvVariableNameEmpty)
+	}
+	name = strings.ReplaceAll(b.cfg.Binary, "{{ .OS }}", b.cfg.Goos)
+
+	// Replace .Arch variable.
+	if strings.Contains(name, "{{ .Arch }}") && b.cfg.Goos == "" {
+		return "", fmt.Errorf("%w", errorEnvVariableNameEmpty)
+	}
+	name = strings.ReplaceAll(name, "{{ .Arch }}", b.cfg.Goarch)
+	fmt.Println(name)
 	for _, char := range name {
 		if !strings.Contains(alpha, strings.ToLower(string(char))) {
-			return fmt.Errorf("%w: found character '%c'", errorInvalidFilename, char)
+			return "", fmt.Errorf("%w: found character '%c'", errorInvalidFilename, char)
 		}
 	}
 
-	b.filename = name
-
-	return nil
+	if name == "" {
+		return "", fmt.Errorf("%w", errEmptyFilename)
+	}
+	return name, nil
 }
 
 func (b *GoBuild) generateFlags() ([]string, error) {

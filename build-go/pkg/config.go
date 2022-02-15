@@ -17,6 +17,7 @@ type goReleaserConfigFile struct {
 	Env     []string `yaml:"env"`
 	Flags   []string `yaml:"flags"`
 	Ldflags []string `yaml:"ldflags"`
+	Binary  string   `yaml:"binary`
 }
 
 type GoReleaserConfig struct {
@@ -25,6 +26,7 @@ type GoReleaserConfig struct {
 	Env     map[string]string
 	Flags   []string
 	Ldflags []string
+	Binary  string
 }
 
 func ConfigFromString(b []byte) (*GoReleaserConfig, error) {
@@ -51,6 +53,7 @@ func fromConfig(cf *goReleaserConfigFile) (*GoReleaserConfig, error) {
 		Goarch:  cf.Goarch,
 		Flags:   cf.Flags,
 		Ldflags: cf.Ldflags,
+		Binary:  cf.Binary,
 	}
 
 	if err := cfg.setEnvs(cf); err != nil {
