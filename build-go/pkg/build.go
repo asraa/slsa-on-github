@@ -15,7 +15,7 @@ var (
 	errorInvalidEnvArgument        = errors.New("invalid env passed via argument")
 	errorEnvVariableNameNotAllowed = errors.New("env variable not allowed")
 	errorInvalidFilename           = errors.New("invalid filename")
-	errEmptyFilename               = errors.New("filename is not set")
+	errorEmptyFilename             = errors.New("filename is not set")
 )
 
 // See `go build help`.
@@ -165,7 +165,7 @@ func (b *GoBuild) generateOutputFilename() (string, error) {
 	}
 
 	if name == "" {
-		return "", fmt.Errorf("%w", errEmptyFilename)
+		return "", fmt.Errorf("%w", errorEmptyFilename)
 	}
 	return name, nil
 }
