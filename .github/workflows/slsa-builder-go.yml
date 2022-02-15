@@ -4,7 +4,6 @@ permissions:
   contents: read
 
 env:
-  GENERATED_BINARY: generated-go-binary
   #TODO: let caller upload ?
   REGISTRY: ghcr.io
   BUILDER_BINARY: builder
@@ -93,7 +92,7 @@ jobs:
 
   build:
     outputs:
-      go-binary-sha256: ${{ steps.build-gen.outputs.go-binary-sha256 }}
+      go-binary-sha256: ${{ steps.sha256-gen.outputs.go-binary-sha256 }}
       go-binary-name: ${{ steps.build-gen.outputs.go-binary-name }}
     runs-on: ubuntu-latest
     needs: builder
@@ -148,7 +147,6 @@ jobs:
         id: build-gen
         shell: bash
         env:
-          UNTRUSTED_BINARY_NAME: "${{ env.GENERATED_BINARY }}"
           BUILDER_BINARY: "${{ env.BUILDER_BINARY }}"
           UNTRUSTED_ENVS: "${{ inputs.env }}"
           UNTRUSTED_WORKING_DIR: "${{ inputs.working-dir }}"
@@ -157,12 +155,19 @@ jobs:
 
           # TODO: pass UNTRUSTED_WORKING_DIR to builder, which will use realpath()
           # to compute the actual directory.
-          echo "./$BUILDER_BINARY" ./releaser.yml "$UNTRUSTED_BINARY_NAME" "$UNTRUSTED_ENVS"
-          ./"$BUILDER_BINARY" ./releaser.yml "$UNTRUSTED_BINARY_NAME" "$UNTRUSTED_ENVS"
+          echo "./$BUILDER_BINARY" ./releaser.yml "$UNTRUSTED_ENVS"
+          ./"$BUILDER_BINARY" ./releaser.yml "$UNTRUSTED_ENVS"
+
+      - name: Hash of project binary
+        id: sha256-gen
+        shell: bash
+        env:
+          UNTRUSTED_BINARY_NAME: "${{ steps.build-gen.outputs.go-binary-name }}"
+        run: |
+          set -euo pipefail
 
           # TODO: digest and names will be returned by the builder using info from config file.
           DIGEST=$(sha256sum "$UNTRUSTED_BINARY_NAME" | awk '{print $1}')
-          echo "::set-output name=go-binary-name::$UNTRUSTED_BINARY_NAME"
           echo "::set-output name=go-binary-sha256::$DIGEST"
 
       #TODO(upload): verify how the action handles malicious names.
