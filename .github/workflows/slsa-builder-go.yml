@@ -242,7 +242,7 @@ jobs:
       # packages: write
       contents: read
     steps:
-      - name: Download provenance
+      - name: Download provenance 2
         uses: actions/download-artifact@v2
         with:
           name: "${{ env.PROVENANCE_BINARY }}"
@@ -264,11 +264,6 @@ jobs:
     
           # Make the builder and provenance generator executable.
           chmod a+x "$PROVENANCE_BINARY"
-
-      - name: Download unsigned provenance
-        uses: actions/download-artifact@v2
-        with:
-          name: "${{ steps.build-gen.outputs.provenance-unsigned }}"
 
       - name: Sign provenance
         id: sign-prov
