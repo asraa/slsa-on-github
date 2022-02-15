@@ -9,7 +9,14 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-var errorInvalidEnvironmentVariable = errors.New("invalid environment variable")
+var (
+	errorInvalidEnvironmentVariable = errors.New("invalid environment variable")
+	errorUnsupportedVersion         = errors.New("version not supported")
+)
+
+var supportedVersions = map[int]bool{
+	1: true,
+}
 
 type goReleaserConfigFile struct {
 	Goos    string   `yaml:"goos"`
@@ -18,6 +25,7 @@ type goReleaserConfigFile struct {
 	Flags   []string `yaml:"flags"`
 	Ldflags []string `yaml:"ldflags"`
 	Binary  string   `yaml:"binary`
+	Version int      `yaml:"version"`
 }
 
 type GoReleaserConfig struct {
@@ -29,7 +37,7 @@ type GoReleaserConfig struct {
 	Binary  string
 }
 
-func ConfigFromString(b []byte) (*GoReleaserConfig, error) {
+func configFromString(b []byte) (*GoReleaserConfig, error) {
 	var cf goReleaserConfigFile
 	if err := yaml.Unmarshal(b, &cf); err != nil {
 		return nil, fmt.Errorf("yaml.Unmarshal: %w", err)
@@ -44,10 +52,14 @@ func ConfigFromFile(pathfn string) (*GoReleaserConfig, error) {
 		return nil, fmt.Errorf("os.ReadFile: %w", err)
 	}
 
-	return ConfigFromString(cfg)
+	return configFromString(cfg)
 }
 
 func fromConfig(cf *goReleaserConfigFile) (*GoReleaserConfig, error) {
+	if err := validateVersion(cf); err != nil {
+		return nil, err
+	}
+
 	cfg := GoReleaserConfig{
 		Goos:    cf.Goos,
 		Goarch:  cf.Goarch,
@@ -61,6 +73,15 @@ func fromConfig(cf *goReleaserConfigFile) (*GoReleaserConfig, error) {
 	}
 
 	return &cfg, nil
+}
+
+func validateVersion(cf *goReleaserConfigFile) error {
+	_, exists := supportedVersions[cf.Version]
+	if !exists {
+		return fmt.Errorf("%w:%d", errorUnsupportedVersion, cf.Version)
+	}
+
+	return nil
 }
 
 func (r *GoReleaserConfig) setEnvs(cf *goReleaserConfigFile) error {
