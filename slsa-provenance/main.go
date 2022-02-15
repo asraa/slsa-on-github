@@ -121,8 +121,10 @@ func main() {
 		return
 	}
 
+	fmt.Printf(provenance)
 	attBytes, err := ioutil.ReadFile(provenance)
 	if err != nil {
+		attBytes = []byte(provenance)
 		panic(err)
 	}
 
