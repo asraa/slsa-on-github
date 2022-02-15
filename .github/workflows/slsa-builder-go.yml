@@ -279,13 +279,13 @@ jobs:
         run: |
           set -euo pipefail
           # Create provenance
-          UNSIGNED_PROVENANCE="$UNTRUSTED_BINARY_NAME.intoto" ./"$PROVENANCE_BINARY" > "$UNTRUSTED_BINARY_NAME.intoto"
-          echo "::set-output name=signed-provenance-name::$UNTRUSTED_BINARY_NAME.intoto"
+          UNSIGNED_PROVENANCE="$UNTRUSTED_BINARY_NAME.intoto" ./"$PROVENANCE_BINARY" > "$UNTRUSTED_BINARY_NAME.signed.intoto"
+          echo "::set-output name=signed-provenance-name::$UNTRUSTED_BINARY_NAME.signed.intoto"
 
       - name: Upload the provenance
         uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 # v2.3.1
         with:
-          name: "${{ env.GENERATED_BINARY }}.intoto"
-          path: "${{ env.GENERATED_BINARY }}.intoto"
+          name: "${{ env.GENERATED_BINARY }}.signed.intoto"
+          path: "${{ env.GENERATED_BINARY }}.signed.intoto"
           retention-days: 5
 
