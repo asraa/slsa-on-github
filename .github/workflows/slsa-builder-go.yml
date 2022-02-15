@@ -207,6 +207,7 @@ jobs:
           DIGEST=$(sha256sum "$UNTRUSTED_BINARY_NAME" | awk '{print $1}')
           echo "::set-output name=go-binary-sha256::$DIGEST"
 
+          echo "getting provenance"
           # Get provenance
           # echo "GITHUB_CONTEXT=${{ toJSON(github) }} ./$PROVENANCE_BINARY"
           export GITHUB_CONTEXT="${{ toJSON(github) }}"
