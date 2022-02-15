@@ -201,6 +201,8 @@ jobs:
         run: |
           set -euo pipefail
 
+          echo "completed build"
+          
           # TODO: digest and names will be returned by the builder using info from config file.
           DIGEST=$(sha256sum "$UNTRUSTED_BINARY_NAME" | awk '{print $1}')
           echo "::set-output name=go-binary-sha256::$DIGEST"
