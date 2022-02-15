@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"context"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -8,8 +10,19 @@ import (
 	"log"
 	"os"
 
+	cjson "github.com/docker/go/canonical/json"
 	intoto "github.com/in-toto/in-toto-golang/in_toto"
 	slsa "github.com/in-toto/in-toto-golang/in_toto/slsa_provenance/v0.2"
+	dsselib "github.com/secure-systems-lab/go-securesystemslib/dsse"
+	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio"
+	"github.com/sigstore/cosign/pkg/providers"
+	"github.com/sigstore/sigstore/pkg/signature/dsse"
+)
+
+const (
+	defaultFulcioAddr   = "https://fulcio.sigstore.dev"
+	defaultOIDCIssuer   = "https://oauth2.sigstore.dev/auth"
+	defaultOIDCClientID = "sigstore"
 )
 
 type GitHubContext struct {
@@ -24,7 +37,6 @@ type GitHubContext struct {
 }
 
 func main() {
-	fmt.Println("generating provenance inside script")
 	digest, ok := os.LookupEnv("DIGEST")
 	if !ok {
 		panic(errors.New("Environment variable DIGEST not present"))
@@ -44,21 +56,6 @@ func main() {
 	if err := json.Unmarshal([]byte(githubContext), gh); err != nil {
 		panic(err)
 	}
-
-	fmt.Println("binary", binary)
-	fmt.Println(gh.Repository)
-	// // Check for GITHUB env variables
-	// ghRunIdStr, ok := os.LookupEnv("GITHUB_RUN_ID")
-	// if !ok {
-	// 	fmt.Fprintln(os.Stderr, "Environment variable GITHUB_RUN_ID not present")
-	// 	os.Exit(1)
-	// }
-
-	// ghRunId, err := strconv.ParseInt(ghRunIdStr, 10, 64)
-	// if err != nil {
-	// 	fmt.Fprintf(os.Stderr, "Invalid github run ID string: %v", err)
-	// 	os.Exit(1)
-	// }
 
 	if _, err := hex.DecodeString(digest); err != nil || len(digest) != 64 {
 		log.Fatal(fmt.Errorf("sha256 digest is not valid: %s", digest))
@@ -109,14 +106,46 @@ func main() {
 		},
 	}
 
-	// att, err := provenance.GenerateAttestation(workflow, run, job, digest)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	attBytes, err := json.Marshal(att)
+	// Get Fulcio signer
+	ctx := context.Background()
+	if !providers.Enabled(ctx) {
+		panic(fmt.Errorf("no auth provider for fulcio is enabled"))
+	}
+
+	fClient, err := fulcio.NewClient(defaultFulcioAddr)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf(string(attBytes))
-	fmt.Printf(`::set-output name=provenance::%s`, string(attBytes))
+	tok, err := providers.Provide(ctx, defaultOIDCClientID)
+	if err != nil {
+		panic(err)
+	}
+	k, err := fulcio.NewSigner(ctx, tok, defaultOIDCIssuer, defaultOIDCClientID, "", fClient)
+	if err != nil {
+		panic(err)
+	}
+	wrappedSigner := dsse.WrapSigner(k, intoto.PayloadType)
+
+	attBytes, err := cjson.MarshalCanonical(att)
+	if err != nil {
+		panic(err)
+	}
+
+	signedAtt, err := wrappedSigner.SignMessage(bytes.NewReader(attBytes))
+	if err != nil {
+		panic(err)
+	}
+
+	envelope := &dsselib.Envelope{}
+	if err = json.Unmarshal(signedAtt, envelope); err != nil {
+		panic(err)
+	}
+
+	payload, err := json.MarshalIndent(envelope, "", "\t")
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Printf(string(payload))
+	fmt.Printf(`::set-output name=provenance::%s`, string(payload))
 }

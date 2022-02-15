@@ -207,8 +207,9 @@ jobs:
           DIGEST=$(sha256sum "$UNTRUSTED_BINARY_NAME" | awk '{print $1}')
           echo "::set-output name=go-binary-sha256::$DIGEST"
 
-          # Get provenance
-          DIGEST="$DIGEST" ./"$PROVENANCE_BINARY"
+          # Create provenance
+          DIGEST="$DIGEST" ./"$PROVENANCE_BINARY" > "$UNTRUSTED_BINARY_NAME.intoto"
+          echo "::set-output name=provenance-name::$UNTRUSTED_BINARY_NAME.intoto"
 
       #TODO(upload): verify how the action handles malicious names.
       - name: Upload the artifact
@@ -216,6 +217,13 @@ jobs:
         with:
           name: ${{ steps.build-gen.outputs.go-binary-name }}
           path: ${{ steps.build-gen.outputs.go-binary-name }}
+          retention-days: 5
+
+      - name: Upload the provenance
+        uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 # v2.3.1
+        with:
+          name: ${{ steps.build-gen.outputs.provenance-name }}
+          path: ${{ steps.build-gen.outputs.provenance-name }}
           retention-days: 5
 
   provenance:
