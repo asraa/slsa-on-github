@@ -14,19 +14,15 @@ jobs:
         uses: actions/setup-go@bfdd3570ce990073878bf10f6b2d79082de49492 # v2.2.0
         with:
           go-version: '1.17'
-          
-      - name: Download deps
-        run: |
-            set -euo pipefail
-            go mod download
-            
+       
       - name: Run tests
         run: |
           set -euo pipefail
           
           # build-go unit tests.
           cd build-go/pkg
-          go test -v ./...
+          go mod download
+          go test -mod=vendor -v ./...
           cd -
           
           # TODO
