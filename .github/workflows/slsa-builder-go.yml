@@ -132,6 +132,11 @@ jobs:
         with:
           name: "${{ env.BUILDER_BINARY }}"
 
+      - name: Download provenance
+        uses: actions/download-artifact@v2
+        with:
+          name: "${{ env.PROVENANCE_BINARY }}"
+
       - name: Verify builder
         env:
           BUILDER_HASH: "${{ needs.builder.outputs.go-builder-sha256 }}"
@@ -149,6 +154,24 @@ jobs:
     
           # Make the builder and provenance generator executable.
           chmod a+x "$BUILDER_BINARY"
+
+      - name: Verify provenance
+        env:
+          PROV_HASH: "${{ needs.builder.outputs.go-prov-sha256 }}"
+          PROVENANCE_BINARY: "${{ env.PROVENANCE_BINARY }}"
+        run: |
+          set -euo pipefail
+      
+          echo "hash of provenance generator should be $PROV_HASH"
+          PROV_HASH=$(sha256sum "$PROVENANCE_BINARY" | awk '{print $1}')
+          echo "provenance generator hash computed is $PROV_HASH"
+
+          # Compare hashes. Explicit exit to be safe.
+          # TODO: remove the provenance generator as well.
+          echo "$PROV_HASH $PROVENANCE_BINARY" | sha256sum --strict --check --status || exit -2
+    
+          # Make the builder and provenance generator executable.
+          chmod a+x "$PROVENANCE_BINARY"
 
       - name: Download dependencies
         shell: bash
@@ -189,7 +212,10 @@ jobs:
           # TODO: digest and names will be returned by the builder using info from config file.
           DIGEST=$(sha256sum "$UNTRUSTED_BINARY_NAME" | awk '{print $1}')
           echo "::set-output name=go-binary-sha256::$DIGEST"
-          echo "::set-output name=gh_context::$GITHUB_CONTEXT"
+
+          # Create provenance
+          DIGEST="$DIGEST" ./"$PROVENANCE_BINARY" > "$UNTRUSTED_BINARY_NAME.intoto"
+          echo "::set-output name=provenance-unsigned::$UNTRUSTED_BINARY_NAME.intoto"
 
       #TODO(upload): verify how the action handles malicious names.
       - name: Upload the artifact
@@ -197,6 +223,14 @@ jobs:
         with:
           name: ${{ steps.build-gen.outputs.go-binary-name }}
           path: ${{ steps.build-gen.outputs.go-binary-name }}
+          retention-days: 5
+
+      #TODO(upload): verify how the action handles malicious names.
+      - name: Upload the provenance
+        uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 # v2.3.1
+        with:
+          name: ${{ steps.build-gen.outputs.provenance-unsigned }}
+          path: ${{ steps.build-gen.outputs.provenance-unsigned }}
           retention-days: 5
 
   provenance:
@@ -231,19 +265,22 @@ jobs:
           # Make the builder and provenance generator executable.
           chmod a+x "$PROVENANCE_BINARY"
 
-      - name: Generate provenance
-        id: prov-gen
+      - name: Download unsigned provenance
+        uses: actions/download-artifact@v2
+        with:
+          name: "${{ steps.build-gen.outputs.provenance-unsigned }}"
+
+      - name: Sign provenance
+        id: sign-prov
         shell: bash
         env:
           UNTRUSTED_BINARY_NAME: "${{ env.GENERATED_BINARY }}"
           PROVENANCE_BINARY: "${{ env.PROVENANCE_BINARY }}"
-          # TODO: Should I generate in prev job and sign in this one to avoid passing.
-          GITHUB_CONTEXT: "${{ needs.builder.outputs.gh_context }}"
         run: |
           set -euo pipefail
           # Create provenance
-          DIGEST="${{ steps.build-gen.outputs.go-binary-sha256 }}" ./"$PROVENANCE_BINARY" > "$UNTRUSTED_BINARY_NAME.intoto"
-          echo "::set-output name=provenance-name::$UNTRUSTED_BINARY_NAME.intoto"
+          UNSIGNED_PROVENANCE="${{ steps.build-gen.outputs.provenance-unsigned }}" ./"$PROVENANCE_BINARY" > "$UNTRUSTED_BINARY_NAME.intoto"
+          echo "::set-output name=signed-provenance-name::$UNTRUSTED_BINARY_NAME.intoto"
 
       - name: Log in to the GitHub Container registry
         uses: docker/login-action@f054a8b539a109f9f41c372932f1ae047eff08c9
@@ -269,7 +306,7 @@ jobs:
       - name: Upload the provenance
         uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 # v2.3.1
         with:
-          name: ${{ steps.build-gen.outputs.provenance-name }}
-          path: ${{ steps.build-gen.outputs.provenance-name }}
+          name: ${{ steps.build-gen.outputs.signed-provenance-name }}
+          path: ${{ steps.build-gen.outputs.signed-provenance-name }}
           retention-days: 5
 
