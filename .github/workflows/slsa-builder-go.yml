@@ -282,27 +282,6 @@ jobs:
           UNSIGNED_PROVENANCE="$UNTRUSTED_BINARY_NAME.intoto" ./"$PROVENANCE_BINARY" > "$UNTRUSTED_BINARY_NAME.intoto"
           echo "::set-output name=signed-provenance-name::$UNTRUSTED_BINARY_NAME.intoto"
 
-      - name: Log in to the GitHub Container registry
-        uses: docker/login-action@f054a8b539a109f9f41c372932f1ae047eff08c9
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      # sign binary and provenance and upload to Container registry
-      - uses: sigstore/cosign-installer@main
-      - name: Sign the binary blog with cosign
-        id: cosignid
-        env:
-          COSIGN_EXPERIMENTAL: "true"
-          # Note: binary name is not verified
-          UNTRUSTED_BINARY_NAME: ${{ steps.build-gen.outputs.go-binary-name }}
-        run: |
-          set -euo pipefail
-          echo cosign upload blob -f "$UNTRUSTED_BINARY_NAME" ghcr.io/asraa/slsa-github-demo
-          echo cosign sign-blob ghcr.io/asraa/slsa-github-demo
-          echo "::set-output name=go-binary-signature::$UNTRUSTED_SIGNED_BINARY_NAME"
-
       - name: Upload the provenance
         uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 # v2.3.1
         with:
