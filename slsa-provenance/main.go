@@ -24,25 +24,25 @@ type GitHubContext struct {
 }
 
 func main() {
-	fmt.Println("generating provenance")
+	fmt.Println("generating provenance inside script")
 	digest, ok := os.LookupEnv("DIGEST")
 	if !ok {
-		log.Fatal(errors.New("Environment variable DIGEST not present"))
+		panic(errors.New("Environment variable DIGEST not present"))
 	}
 
 	binary, ok := os.LookupEnv("UNTRUSTED_BINARY_NAME")
 	if !ok {
-		log.Fatal(errors.New("Environment variable UNTRUSTED_BINARY_NAME not present"))
+		panic(errors.New("Environment variable UNTRUSTED_BINARY_NAME not present"))
 	}
 
 	githubContext, ok := os.LookupEnv("GITHUB_CONTEXT")
 	if !ok {
-		log.Fatal(errors.New("Environment variable GITHUB_CONTEXT not present"))
+		panic(errors.New("Environment variable GITHUB_CONTEXT not present"))
 	}
 
 	gh := &GitHubContext{}
 	if err := json.Unmarshal([]byte(githubContext), gh); err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 
 	fmt.Println("binary", binary)
@@ -115,7 +115,7 @@ func main() {
 	// }
 	attBytes, err := json.Marshal(att)
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 	fmt.Printf(string(attBytes))
 	fmt.Printf(`::set-output name=provenance::%s`, string(attBytes))

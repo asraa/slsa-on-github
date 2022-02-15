@@ -211,7 +211,9 @@ jobs:
           # Get provenance
           # echo "GITHUB_CONTEXT=${{ toJSON(github) }} ./$PROVENANCE_BINARY"
           export GITHUB_CONTEXT="${{ toJSON(github) }}"
-          ./"$PROVENANCE_BINARY" 
+          ./"$PROVENANCE_BINARY"
+          echo "done provenance"
+
 
       #TODO(upload): verify how the action handles malicious names.
       - name: Upload the artifact
