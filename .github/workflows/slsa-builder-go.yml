@@ -163,7 +163,8 @@ jobs:
           echo "$PROV_HASH $PROVENANCE_BINARY" | sha256sum --strict --check --status || exit -2
     
           # Make the builder and provenance generator executable.
-          chmod a+x "$PROVENANCE_BINARY" "$BUILDER_BINARY"
+          chmod a+x "$BUILDER_BINARY"
+          chmod a+x "$PROVENANCE_BINARY"
 
       - name: Download dependencies
         shell: bash
