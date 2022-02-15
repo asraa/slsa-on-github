@@ -164,5 +164,4 @@ func main() {
 	}
 
 	fmt.Printf(string(payload))
-	fmt.Printf(`::set-output name=provenance::%s`, string(payload))
 }
