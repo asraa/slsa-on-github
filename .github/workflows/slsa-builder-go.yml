@@ -211,8 +211,6 @@ jobs:
 
           echo "getting provenance"
           # Get provenance
-          # echo "GITHUB_CONTEXT=${{ toJSON(github) }} ./$PROVENANCE_BINARY"
-          # export GITHUB_CONTEXT="${{ toJSON(github) }}"
           stat "$PROVENANCE_BINARY"
           ./"$PROVENANCE_BINARY"
           echo "done provenance"
