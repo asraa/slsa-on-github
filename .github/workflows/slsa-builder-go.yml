@@ -189,6 +189,7 @@ jobs:
           # TODO: digest and names will be returned by the builder using info from config file.
           DIGEST=$(sha256sum "$UNTRUSTED_BINARY_NAME" | awk '{print $1}')
           echo "::set-output name=go-binary-sha256::$DIGEST"
+          echo "::set-output name=gh_context::$GITHUB_CONTEXT"
 
       #TODO(upload): verify how the action handles malicious names.
       - name: Upload the artifact
@@ -234,9 +235,10 @@ jobs:
         id: prov-gen
         shell: bash
         env:
-          UNTRUSTED_BINARY_NAME: "${{ env.UNTRUSTED_BINARY_NAME }}"
+          UNTRUSTED_BINARY_NAME: "${{ env.GENERATED_BINARY }}"
           PROVENANCE_BINARY: "${{ env.PROVENANCE_BINARY }}"
-          GITHUB_CONTEXT: ${{ env.GITHUB_CONTEXT }}
+          # TODO: Should I generate in prev job and sign in this one to avoid passing.
+          GITHUB_CONTEXT: "${{ needs.builder.outputs.gh_context }}""
         run: |
           set -euo pipefail
           # Create provenance
