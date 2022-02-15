@@ -19,8 +19,8 @@ type GitHubContext struct {
 	RunId      string `json:"run_id"`
 	EventName  string `json:"event_name"`
 	SHA        string `json:"sha"`
-
-	RunNumber string `json:"run_number"`
+	Token      string `json:"token,omitempty"`
+	RunNumber  string `json:"run_number"`
 }
 
 func main() {

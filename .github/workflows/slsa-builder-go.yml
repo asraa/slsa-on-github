@@ -142,7 +142,7 @@ jobs:
           BUILDER_HASH: "${{ needs.builder.outputs.go-builder-sha256 }}"
           BUILDER_BINARY: "${{ env.BUILDER_BINARY }}"
           PROV_HASH: "${{ needs.builder.outputs.go-prov-sha256 }}"
-          PROV_BINARY: "${{ env.PROVENANCE_BINARY }}"
+          PROVENANCE_BINARY: "${{ env.PROVENANCE_BINARY }}"
         run: |
           set -euo pipefail
 
@@ -155,15 +155,15 @@ jobs:
           echo "$BUILDER_HASH $BUILDER_BINARY" | sha256sum --strict --check --status || exit -2
 
           echo "hash of provenance generator should be $PROV_HASH"
-          PROV_HASH=$(sha256sum "$PROV_BINARY" | awk '{print $1}')
+          PROV_HASH=$(sha256sum "$PROVENANCE_BINARY" | awk '{print $1}')
           echo "provenance generator hash computed is $PROV_HASH"
 
           # Compare hashes. Explicit exit to be safe.
           # TODO: remove the provenance generator as well.
-          echo "$PROV_HASH $PROV_BINARY" | sha256sum --strict --check --status || exit -2
+          echo "$PROV_HASH $PROVENANCE_BINARY" | sha256sum --strict --check --status || exit -2
     
           # Make the builder and provenance generator executable.
-          chmod a+x "$PROV_BINARY" "$BUILDER_BINARY"
+          chmod a+x "$PROVENANCE_BINARY" "$BUILDER_BINARY"
 
       - name: Download dependencies
         shell: bash
@@ -182,7 +182,7 @@ jobs:
         shell: bash
         env:
           BUILDER_BINARY: "${{ env.BUILDER_BINARY }}"
-          PROVENANCE_BINARY: "${{ env.PROV_BINARY }}"
+          PROVENANCE_BINARY: "${{ env.PROVENANCE_BINARY }}"
           UNTRUSTED_ENVS: "${{ inputs.env }}"
           UNTRUSTED_WORKING_DIR: "${{ inputs.working-dir }}"
         run: |
@@ -202,12 +202,13 @@ jobs:
           set -euo pipefail
 
           echo "completed build"
-          
+
           # TODO: digest and names will be returned by the builder using info from config file.
           DIGEST=$(sha256sum "$UNTRUSTED_BINARY_NAME" | awk '{print $1}')
           echo "::set-output name=go-binary-sha256::$DIGEST"
 
           # Get provenance
+          echo "GITHUB_CONTEXT=${{ toJSON(github) }} ./$PROVENANCE_BINARY"
           GITHUB_CONTEXT=${{ toJSON(github) }} ./"$PROVENANCE_BINARY" 
 
       #TODO(upload): verify how the action handles malicious names.
