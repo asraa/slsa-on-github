@@ -153,11 +153,11 @@ func (b *GoBuild) generateOutputFilename() (string, error) {
 	name = strings.ReplaceAll(b.cfg.Binary, "{{ .OS }}", b.cfg.Goos)
 
 	// Replace .Arch variable.
-	if strings.Contains(name, "{{ .Arch }}") && b.cfg.Goos == "" {
+	if strings.Contains(name, "{{ .Arch }}") && b.cfg.Goarch == "" {
 		return "", fmt.Errorf("%w", errorEnvVariableNameEmpty)
 	}
 	name = strings.ReplaceAll(name, "{{ .Arch }}", b.cfg.Goarch)
-	fmt.Println(name)
+
 	for _, char := range name {
 		if !strings.Contains(alpha, strings.ToLower(string(char))) {
 			return "", fmt.Errorf("%w: found character '%c'", errorInvalidFilename, char)

@@ -111,3 +111,168 @@ func TestAllowedArgument(t *testing.T) {
 		})
 	}
 }
+
+func TestFilenameAllowed(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		filename string
+		goos     string
+		goarch   string
+		argEnvs  string
+		envs     string
+		expected struct {
+			err error
+			fn  string
+		}
+	}{
+		{
+			name:     "valid filename",
+			filename: "../filename",
+			expected: struct {
+				err error
+				fn  string
+			}{
+				err: errorInvalidFilename,
+			},
+		},
+		{
+			name:     "valid filename",
+			filename: "",
+			expected: struct {
+				err error
+				fn  string
+			}{
+				err: errorEmptyFilename,
+			},
+		},
+		{
+			name:     "filename arch",
+			filename: "name-{{ .Arch }}",
+			expected: struct {
+				err error
+				fn  string
+			}{
+				err: errorEnvVariableNameEmpty,
+			},
+		},
+		{
+			name:     "filename os",
+			filename: "name-{{ .OS }}",
+			expected: struct {
+				err error
+				fn  string
+			}{
+				err: errorEnvVariableNameEmpty,
+			},
+		},
+		{
+			name:     "filename os",
+			filename: "$bla",
+			expected: struct {
+				err error
+				fn  string
+			}{
+				err: errorInvalidFilename,
+			},
+		},
+		{
+			name:     "filename os",
+			filename: "name-{{ .OS }}",
+			expected: struct {
+				err error
+				fn  string
+			}{
+				err: errorEnvVariableNameEmpty,
+			},
+		},
+		{
+			name:     "filename linux os",
+			filename: "name-{{ .OS }}",
+			goos:     "linux",
+			expected: struct {
+				err error
+				fn  string
+			}{
+				err: nil,
+				fn:  "name-linux",
+			},
+		},
+		{
+			name:     "filename amd64 arch",
+			filename: "name-{{ .Arch }}",
+			goarch:   "amd64",
+			expected: struct {
+				err error
+				fn  string
+			}{
+				err: nil,
+				fn:  "name-amd64",
+			},
+		},
+		{
+			name:     "filename amd64/linux arch",
+			filename: "name-{{ .OS }}-{{ .Arch }}",
+			goarch:   "amd64",
+			goos:     "linux",
+			expected: struct {
+				err error
+				fn  string
+			}{
+				err: nil,
+				fn:  "name-linux-amd64",
+			},
+		},
+		{
+			name:     "filename invalid arch",
+			filename: "name-{{ .Arch }}",
+			goarch:   "something/../../",
+			expected: struct {
+				err error
+				fn  string
+			}{
+				err: errorInvalidFilename,
+			},
+		},
+		{
+			name:     "filename invalid not supported",
+			filename: "name-{{ .Bla }}",
+			goarch:   "something/../../",
+			expected: struct {
+				err error
+				fn  string
+			}{
+				err: errorInvalidFilename,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt // Re-initializing variable so it is not changed while executing the closure below
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			cfg := goReleaserConfigFile{
+				Binary:  tt.filename,
+				Version: 1,
+				Goos:    tt.goos,
+				Goarch:  tt.goarch,
+			}
+			c, err := fromConfig(&cfg)
+			if err != nil {
+				t.Errorf("fromConfig: %v", err)
+			}
+			b := GoBuildNew("go compiler", c)
+
+			fn, err := b.generateOutputFilename()
+			if !errCmp(err, tt.expected.err) {
+				t.Errorf(cmp.Diff(err, tt.expected))
+			}
+
+			if fn != tt.expected.fn {
+				t.Errorf(cmp.Diff(fn, tt.expected.fn))
+			}
+		})
+	}
+}
