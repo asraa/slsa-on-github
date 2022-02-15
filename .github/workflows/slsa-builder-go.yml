@@ -183,7 +183,6 @@ jobs:
         shell: bash
         env:
           BUILDER_BINARY: "${{ env.BUILDER_BINARY }}"
-          PROVENANCE_BINARY: "${{ env.PROVENANCE_BINARY }}"
           UNTRUSTED_ENVS: "${{ inputs.env }}"
           UNTRUSTED_WORKING_DIR: "${{ inputs.working-dir }}"
           GITHUB_CONTEXT: ${{ toJSON(github) }}
@@ -207,8 +206,19 @@ jobs:
           DIGEST=$(sha256sum "$UNTRUSTED_BINARY_NAME" | awk '{print $1}')
           echo "::set-output name=go-binary-sha256::$DIGEST"
 
+      - name: Generate provenance
+        id: prov-gen
+        shell: bash
+        permissions:
+          id-token: write
+        env:
+          UNTRUSTED_BINARY_NAME: "${{ env.UNTRUSTED_BINARY_NAME }}"
+          PROVENANCE_BINARY: "${{ env.PROVENANCE_BINARY }}"
+          GITHUB_CONTEXT: ${{ env.GITHUB_CONTEXT }}
+        run: |
+          set -euo pipefail
           # Create provenance
-          DIGEST="$DIGEST" ./"$PROVENANCE_BINARY" > "$UNTRUSTED_BINARY_NAME.intoto"
+          DIGEST="${{ steps.build-gen.outputs.go-binary-sha256 }}" ./"$PROVENANCE_BINARY" > "$UNTRUSTED_BINARY_NAME.intoto"
           echo "::set-output name=provenance-name::$UNTRUSTED_BINARY_NAME.intoto"
 
       #TODO(upload): verify how the action handles malicious names.
