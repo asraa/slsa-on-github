@@ -233,8 +233,6 @@ jobs:
       - name: Generate provenance
         id: prov-gen
         shell: bash
-        permissions:
-          id-token: write
         env:
           UNTRUSTED_BINARY_NAME: "${{ env.UNTRUSTED_BINARY_NAME }}"
           PROVENANCE_BINARY: "${{ env.PROVENANCE_BINARY }}"
