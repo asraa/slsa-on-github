@@ -242,11 +242,7 @@ jobs:
       # packages: write
       contents: read
     steps:
-      - name: Download provenance
-        uses: actions/download-artifact@v2
-        with:
-          name: "${{ env.PROVENANCE_BINARY }}"
-
+      # Seems like the provenance binary already existed
       - name: Verify provenance
         env:
           PROV_HASH: "${{ needs.builder.outputs.go-prov-sha256 }}"
