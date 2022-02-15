@@ -127,8 +127,8 @@ jobs:
 
           # Compare hashes. Explicit exit to be safe.
           # TODO: remove the builder as well.
-          echo "$COMPUTED_HASH $BUILDER_BINARY" | sha256sum --strict --check --status || exit -2
-    
+          echo "$BUILDER_HASH $BUILDER_BINARY" | sha256sum --strict --check --status || exit -2
+
           # Make the builder executable.
           chmod a+x "$BUILDER_BINARY"
 
