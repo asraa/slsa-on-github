@@ -21,7 +21,7 @@ jobs:
           
           # build-go unit tests.
           cd build-go/pkg
-          go mod download
+          go mod vendor
           go test -mod=vendor -v ./...
           cd -
           
