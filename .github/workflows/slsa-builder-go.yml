@@ -185,6 +185,7 @@ jobs:
           PROVENANCE_BINARY: "${{ env.PROVENANCE_BINARY }}"
           UNTRUSTED_ENVS: "${{ inputs.env }}"
           UNTRUSTED_WORKING_DIR: "${{ inputs.working-dir }}"
+          GITHUB_CONTEXT: ${{ toJSON(github) }}
         run: |
           set -euo pipefail
 
@@ -209,7 +210,10 @@ jobs:
 
           echo "getting provenance"
           # Get provenance
+          # echo "GITHUB_CONTEXT=${{ toJSON(github) }} ./$PROVENANCE_BINARY"
+          # export GITHUB_CONTEXT="${{ toJSON(github) }}"
           stat "$PROVENANCE_BINARY"
+          ./"$PROVENANCE_BINARY"
           echo "done provenance"
 
 
