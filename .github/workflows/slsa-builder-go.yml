@@ -238,7 +238,7 @@ jobs:
           UNTRUSTED_BINARY_NAME: "${{ env.GENERATED_BINARY }}"
           PROVENANCE_BINARY: "${{ env.PROVENANCE_BINARY }}"
           # TODO: Should I generate in prev job and sign in this one to avoid passing.
-          GITHUB_CONTEXT: "${{ needs.builder.outputs.gh_context }}""
+          GITHUB_CONTEXT: "${{ needs.builder.outputs.gh_context }}"
         run: |
           set -euo pipefail
           # Create provenance
