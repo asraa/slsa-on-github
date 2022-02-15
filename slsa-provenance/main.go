@@ -24,6 +24,7 @@ type GitHubContext struct {
 }
 
 func main() {
+	fmt.Println("generating provenance")
 	digest, ok := os.LookupEnv("DIGEST")
 	if !ok {
 		log.Fatal(errors.New("Environment variable DIGEST not present"))
