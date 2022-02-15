@@ -16,6 +16,7 @@ import (
 	dsselib "github.com/secure-systems-lab/go-securesystemslib/dsse"
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio"
 	"github.com/sigstore/cosign/pkg/providers"
+	_ "github.com/sigstore/cosign/pkg/providers/all"
 	"github.com/sigstore/sigstore/pkg/signature/dsse"
 )
 
