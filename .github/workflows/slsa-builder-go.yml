@@ -9,7 +9,7 @@ env:
   BUILDER_BINARY: builder
   PROVENANCE_BINARY: provenance
   BUILDER_REPOSITORY: asraa/slsa-on-github
-  BUILDER_REF: main
+  BUILDER_REF: test-prov
 
 ###################################################################
 #                                                                 #
@@ -100,12 +100,15 @@ jobs:
         with:
           name: "${{ env.BUILDER_BINARY }}"
           path: "build-go/${{ env.BUILDER_BINARY }}"
+          if-no-files-found: error
           retention-days: 5
+
       - name: Upload the provenance binary
         uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 # v2.3.1
         with:
           name: "${{ env.PROVENANCE_BINARY }}"
           path: "slsa-provenance/${{ env.PROVENANCE_BINARY }}"
+          if-no-files-found: error
           retention-days: 5
 
   build:
@@ -163,8 +166,8 @@ jobs:
           set -euo pipefail
       
           echo "hash of provenance generator should be $PROV_HASH"
-          PROV_HASH=$(sha256sum "$PROVENANCE_BINARY" | awk '{print $1}')
-          echo "provenance generator hash computed is $PROV_HASH"
+          COMPUTED_HASH=$(sha256sum "$PROVENANCE_BINARY" | awk '{print $1}')
+          echo "provenance generator hash computed is $COMPUTED_HASH"
 
           # Compare hashes. Explicit exit to be safe.
           # TODO: remove the provenance generator as well.
@@ -192,7 +195,7 @@ jobs:
           BUILDER_BINARY: "${{ env.BUILDER_BINARY }}"
           UNTRUSTED_ENVS: "${{ inputs.env }}"
           UNTRUSTED_WORKING_DIR: "${{ inputs.working-dir }}"
-          GITHUB_CONTEXT: ${{ toJSON(github) }}
+          GITHUB_CONTEXT: "${{ toJSON(github) }}"
         run: |
           set -euo pipefail
 
@@ -221,16 +224,18 @@ jobs:
       - name: Upload the artifact
         uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 # v2.3.1
         with:
-          name: ${{ steps.build-gen.outputs.go-binary-name }}
-          path: ${{ steps.build-gen.outputs.go-binary-name }}
+          name: "${{ steps.build-gen.outputs.go-binary-name }}"
+          path: "${{ steps.build-gen.outputs.go-binary-name }}"
+          if-no-files-found: error
           retention-days: 5
 
       #TODO(upload): verify how the action handles malicious names.
       - name: Upload the provenance
         uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 # v2.3.1
         with:
-          name: ${{ steps.build-gen.outputs.provenance-unsigned }}
-          path: ${{ steps.build-gen.outputs.provenance-unsigned }}
+          name: "${{ steps.build-gen.outputs.provenance-unsigned }}"
+          path: "${{ steps.build-gen.outputs.provenance-unsigned }}"
+          if-no-files-found: error
           retention-days: 5
 
   provenance:
@@ -250,7 +255,7 @@ jobs:
       - name: Download provenance 
         uses: actions/download-artifact@v2
         with:
-          name: "${{ env.GENERATED_BINARY }}.intoto"
+          name: "${{ steps.build-gen.outputs.go-binary-name }}.intoto"
 
       - name: Verify provenance
         env:
@@ -274,7 +279,7 @@ jobs:
         id: sign-prov
         shell: bash
         env:
-          UNTRUSTED_BINARY_NAME: "${{ env.GENERATED_BINARY }}"
+          UNTRUSTED_BINARY_NAME: "${{ steps.build-gen.outputs.go-binary-name }}"
           PROVENANCE_BINARY: "${{ env.PROVENANCE_BINARY }}"
         run: |
           set -euo pipefail
@@ -285,7 +290,8 @@ jobs:
       - name: Upload the provenance
         uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 # v2.3.1
         with:
-          name: "${{ env.GENERATED_BINARY }}.signed.intoto"
-          path: "${{ env.GENERATED_BINARY }}.signed.intoto"
+          name: "${{ needs.build.outputs.go-binary-name }}.signed.intoto"
+          path: "${{ needs.build.outputs.go-binary-name }}.signed.intoto"
+          if-no-files-found: error
           retention-days: 5
 
