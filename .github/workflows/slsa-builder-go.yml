@@ -121,6 +121,7 @@ jobs:
       - name: Checkout the repository
         uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 # v2.3.4
         with:
+          ref: e2e-test
           fetch-depth: 0
 
       # Code needed (not tested) if go-vesion is made optional.
