@@ -120,7 +120,6 @@ func TestFilenameAllowed(t *testing.T) {
 		filename string
 		goos     string
 		goarch   string
-		argEnvs  string
 		envs     string
 		expected struct {
 			err error
@@ -267,11 +266,116 @@ func TestFilenameAllowed(t *testing.T) {
 
 			fn, err := b.generateOutputFilename()
 			if !errCmp(err, tt.expected.err) {
-				t.Errorf(cmp.Diff(err, tt.expected))
+				t.Errorf(cmp.Diff(err, tt.expected.err))
 			}
 
 			if fn != tt.expected.fn {
 				t.Errorf(cmp.Diff(fn, tt.expected.fn))
+			}
+		})
+	}
+}
+
+func TestArgEnvVariables(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		argEnv   string
+		expected struct {
+			err error
+			env map[string]string
+		}
+	}{
+		{
+			name:   "valid arg envs",
+			argEnv: "VAR1:value1, VAR2:value2",
+			expected: struct {
+				err error
+				env map[string]string
+			}{
+				err: nil,
+				env: map[string]string{"VAR1": "value1", "VAR2": "value2"},
+			},
+		},
+		{
+			name:   "valid arg envs not space",
+			argEnv: "VAR1:value1,VAR2:value2",
+			expected: struct {
+				err error
+				env map[string]string
+			}{
+				err: nil,
+				env: map[string]string{"VAR1": "value1", "VAR2": "value2"},
+			},
+		},
+		{
+			name:   "invalid arg empty 2 values",
+			argEnv: "VAR1:value1,",
+			expected: struct {
+				err error
+				env map[string]string
+			}{
+				err: errorInvalidEnvArgument,
+				env: map[string]string{"VAR1": "value1"},
+			},
+		},
+		{
+			name:   "invalid arg empty 3 values",
+			argEnv: "VAR1:value1,, VAR3:value3",
+			expected: struct {
+				err error
+				env map[string]string
+			}{
+				err: errorInvalidEnvArgument,
+				env: map[string]string{"VAR1": "value1"},
+			},
+		},
+		{
+			name:   "invalid arg uses equal",
+			argEnv: "VAR1=value1",
+			expected: struct {
+				err error
+				env map[string]string
+			}{
+				err: errorInvalidEnvArgument,
+				env: map[string]string{},
+			},
+		},
+		{
+			name:   "valid single arg",
+			argEnv: "VAR1:value1",
+			expected: struct {
+				err error
+				env map[string]string
+			}{
+				err: nil,
+				env: map[string]string{"VAR1": "value1"},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt // Re-initializing variable so it is not changed while executing the closure below
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			cfg := goReleaserConfigFile{
+				Version: 1,
+			}
+			c, err := fromConfig(&cfg)
+			if err != nil {
+				t.Errorf("fromConfig: %v", err)
+			}
+			b := GoBuildNew("go compiler", c)
+
+			err = b.SetArgEnvVariables(tt.argEnv)
+			if !errCmp(err, tt.expected.err) {
+				t.Errorf(cmp.Diff(err, tt.expected.err))
+			}
+
+			if !cmp.Equal(b.argEnv, tt.expected.env) {
+				t.Errorf(cmp.Diff(b.argEnv, tt.expected.env))
 			}
 		})
 	}

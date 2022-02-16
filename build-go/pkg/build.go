@@ -124,9 +124,7 @@ func (b *GoBuild) SetArgEnvVariables(envs string) error {
 	// e.g. LD_PRELOAD, etc.
 	for _, e := range strings.Split(envs, ",") {
 		s := strings.Trim(e, " ")
-		if len(s) == 0 {
-			continue
-		}
+
 		sp := strings.Split(s, ":")
 		if len(sp) != 2 {
 			return fmt.Errorf("%w: %s", errorInvalidEnvArgument, s)
