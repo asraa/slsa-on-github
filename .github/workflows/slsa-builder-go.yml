@@ -247,15 +247,15 @@ jobs:
       # packages: write
       contents: read
     steps:
-      - name: Download provenance 2
+      - name: Download provenance binary
         uses: actions/download-artifact@v2
         with:
           name: "${{ env.PROVENANCE_BINARY }}"
 
-      - name: Download provenance 
+      - name: Download unsigned provenance 
         uses: actions/download-artifact@v2
         with:
-          name: "${{ steps.build-gen.outputs.go-binary-name }}.intoto"
+          name: "${{ needs.build.outputs.go-binary-name }}.intoto"
 
       - name: Verify provenance
         env:
@@ -279,7 +279,7 @@ jobs:
         id: sign-prov
         shell: bash
         env:
-          UNTRUSTED_BINARY_NAME: "${{ steps.build-gen.outputs.go-binary-name }}"
+          UNTRUSTED_BINARY_NAME: "${{ needs.build.outputs.go-binary-name }}"
           PROVENANCE_BINARY: "${{ env.PROVENANCE_BINARY }}"
         run: |
           set -euo pipefail
