@@ -287,7 +287,7 @@ func TestArgEnvVariables(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		argEnv   string
+		argEnv   []string
 		expected struct {
 			err error
 			env map[string]string
@@ -295,7 +295,7 @@ func TestArgEnvVariables(t *testing.T) {
 	}{
 		{
 			name:   "valid arg envs",
-			argEnv: "VAR1:value1, VAR2:value2",
+			argEnv: []string{"VAR1:value1", "VAR2:value2"},
 			expected: struct {
 				err error
 				env map[string]string
@@ -306,7 +306,7 @@ func TestArgEnvVariables(t *testing.T) {
 		},
 		{
 			name:   "empty arg envs",
-			argEnv: "",
+			argEnv: []string{},
 			expected: struct {
 				err error
 				env map[string]string
@@ -317,7 +317,7 @@ func TestArgEnvVariables(t *testing.T) {
 		},
 		{
 			name:   "valid arg envs not space",
-			argEnv: "VAR1:value1,VAR2:value2",
+			argEnv: []string{"VAR1:value1", "VAR2:value2"},
 			expected: struct {
 				err error
 				env map[string]string
@@ -328,7 +328,7 @@ func TestArgEnvVariables(t *testing.T) {
 		},
 		{
 			name:   "invalid arg empty 2 values",
-			argEnv: "VAR1:value1,",
+			argEnv: []string{"VAR1:value1", ""},
 			expected: struct {
 				err error
 				env map[string]string
@@ -338,7 +338,7 @@ func TestArgEnvVariables(t *testing.T) {
 		},
 		{
 			name:   "invalid arg empty 3 values",
-			argEnv: "VAR1:value1,, VAR3:value3",
+			argEnv: []string{"VAR1:value1", "", "VAR3:value3"},
 			expected: struct {
 				err error
 				env map[string]string
@@ -348,7 +348,7 @@ func TestArgEnvVariables(t *testing.T) {
 		},
 		{
 			name:   "invalid arg uses equal",
-			argEnv: "VAR1=value1",
+			argEnv: []string{"VAR1=value1"},
 			expected: struct {
 				err error
 				env map[string]string
@@ -358,7 +358,7 @@ func TestArgEnvVariables(t *testing.T) {
 		},
 		{
 			name:   "valid single arg",
-			argEnv: "VAR1:value1",
+			argEnv: []string{"VAR1:value1"},
 			expected: struct {
 				err error
 				env map[string]string
@@ -369,7 +369,7 @@ func TestArgEnvVariables(t *testing.T) {
 		},
 		{
 			name:   "invalid valid single arg with empty",
-			argEnv: "VAR1:value1:",
+			argEnv: []string{"VAR1:value1:"},
 			expected: struct {
 				err error
 				env map[string]string
@@ -527,7 +527,7 @@ func TestGenerateLdflags(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		argEnv   string
+		argEnv   []string
 		ldflags  []string
 		expected struct {
 			err     error
@@ -536,7 +536,7 @@ func TestGenerateLdflags(t *testing.T) {
 	}{
 		{
 			name:    "version ldflags",
-			argEnv:  "VERSION_LDFLAGS:value1",
+			argEnv:  []string{"VERSION_LDFLAGS:value1"},
 			ldflags: []string{"{{ .Env.VERSION_LDFLAGS }}"},
 			expected: struct {
 				err     error
@@ -548,7 +548,7 @@ func TestGenerateLdflags(t *testing.T) {
 		},
 		{
 			name:    "one value with text",
-			argEnv:  "VAR1:value1, VAR2:value2",
+			argEnv:  []string{"VAR1:value1", "VAR2:value2"},
 			ldflags: []string{"name-{{ .Env.VAR1 }}"},
 			expected: struct {
 				err     error
@@ -560,7 +560,7 @@ func TestGenerateLdflags(t *testing.T) {
 		},
 		{
 			name:    "two values with text",
-			argEnv:  "VAR1:value1, VAR2:value2",
+			argEnv:  []string{"VAR1:value1", "VAR2:value2"},
 			ldflags: []string{"name-{{ .Env.VAR1 }}-{{ .Env.VAR2 }}"},
 			expected: struct {
 				err     error
@@ -572,7 +572,7 @@ func TestGenerateLdflags(t *testing.T) {
 		},
 		{
 			name:    "two values with text and not space between env",
-			argEnv:  "VAR1:value1,VAR2:value2",
+			argEnv:  []string{"VAR1:value1", "VAR2:value2"},
 			ldflags: []string{"name-{{ .Env.VAR1 }}-{{ .Env.VAR2 }}"},
 			expected: struct {
 				err     error
@@ -584,7 +584,7 @@ func TestGenerateLdflags(t *testing.T) {
 		},
 		{
 			name:    "same two values with text",
-			argEnv:  "VAR1:value1, VAR2:value2",
+			argEnv:  []string{"VAR1:value1", "VAR2:value2"},
 			ldflags: []string{"name-{{ .Env.VAR1 }}-{{ .Env.VAR1 }}"},
 			expected: struct {
 				err     error
@@ -596,7 +596,7 @@ func TestGenerateLdflags(t *testing.T) {
 		},
 		{
 			name:    "same value extremeties",
-			argEnv:  "VAR1:value1, VAR2:value2",
+			argEnv:  []string{"VAR1:value1", "VAR2:value2"},
 			ldflags: []string{"{{ .Env.VAR1 }}-name-{{ .Env.VAR1 }}"},
 			expected: struct {
 				err     error
@@ -608,7 +608,7 @@ func TestGenerateLdflags(t *testing.T) {
 		},
 		{
 			name:    "two different value extremeties",
-			argEnv:  "VAR1:value1, VAR2:value2",
+			argEnv:  []string{"VAR1:value1", "VAR2:value2"},
 			ldflags: []string{"{{ .Env.VAR1 }}-name-{{ .Env.VAR2 }}"},
 			expected: struct {
 				err     error
@@ -620,7 +620,7 @@ func TestGenerateLdflags(t *testing.T) {
 		},
 		{
 			name:    "undefined env variable",
-			argEnv:  "VAR2:value2",
+			argEnv:  []string{"VAR2:value2"},
 			ldflags: []string{"{{ .Env.VAR1 }}-name-{{ .Env.VAR1 }}"},
 			expected: struct {
 				err     error
@@ -631,7 +631,7 @@ func TestGenerateLdflags(t *testing.T) {
 		},
 		{
 			name:    "undefined env variable 1",
-			argEnv:  "VAR2:value2",
+			argEnv:  []string{"VAR2:value2"},
 			ldflags: []string{"{{ .Env.VAR2 }}-name-{{ .Env.VAR1 }}"},
 			expected: struct {
 				err     error
@@ -642,7 +642,7 @@ func TestGenerateLdflags(t *testing.T) {
 		},
 		{
 			name:    "empty env variable",
-			argEnv:  "",
+			argEnv:  []string{},
 			ldflags: []string{"{{ .Env.VAR1 }}-name-{{ .Env.VAR1 }}"},
 			expected: struct {
 				err     error
