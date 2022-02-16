@@ -77,12 +77,12 @@ func (b *GoBuild) Run() error {
 		flags = append(flags, fmt.Sprintf("-ldflags=%s", ldflags))
 	}
 
-	// Set filename as last argument.
+	// Set filename and directory as last argument.
 	filename, err := b.generateOutputFilename()
 	if err != nil {
 		return err
 	}
-	flags = append(flags, []string{"-o", filename}...)
+	flags = append(flags, []string{"-o", filename, b.cfg.Dir}...)
 
 	fmt.Printf("::set-output name=go-binary-name::%s\n", filename)
 	return syscall.Exec(b.goc, flags, envs)

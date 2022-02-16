@@ -8,9 +8,11 @@ flags:
   - -trimpath
   - -tags=netgo
 
+#TODO:
+#mod_timestamp: '{{ .CommitTimestamp }}'
 goos: linux
 goarch: amd64
 binary: binary-{{ .OS }}-{{ .Arch }}
-dir: abc/
+dir: build-go
 ldflags:
   - '{{ .Env.VERSION_LDFLAGS }}'

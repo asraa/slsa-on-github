@@ -11,6 +11,5 @@ flags:
 goos: linux
 goarch: amd64
 binary: binary-{{ .OS }}-{{ .Arch }}
-dir: abc/
 ldflags:
   - '{{ .Env.VERSION_LDFLAGS }}'

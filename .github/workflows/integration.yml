@@ -4,14 +4,6 @@ on: [pull_request, workflow_dispatch]
 permissions: read-all
 
 jobs:
-  checkout:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 # v2.3.4
-        with:
-          repository: 'laurentsimon/slsa-on-github-test'  
-
   args:
     runs-on: ubuntu-latest
     outputs:
