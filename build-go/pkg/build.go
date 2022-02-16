@@ -27,7 +27,7 @@ var allowedBuildArgs = map[string]bool{
 	"-v": true, "-x": true, "-buildinfo": true,
 	"-buildmode": true, "-buildvcs": true, "-compiler": true,
 	"-gccgoflags": true, "-gcflags": true,
-	"-ldflags": true, "-linkshared": true, "-mod": true,
+	"-ldflags": true, "-linkshared": true,
 	"-tags": true, "-trimpath": true,
 }
 
@@ -147,7 +147,7 @@ func (b *GoBuild) generateOutputFilename() (string, error) {
 
 	var name string
 
-	// Replace .Os variable.
+	// Replace .OS variable.
 	if strings.Contains(b.cfg.Binary, "{{ .OS }}") && b.cfg.Goos == "" {
 		return "", fmt.Errorf("%w", errorEnvVariableNameEmpty)
 	}

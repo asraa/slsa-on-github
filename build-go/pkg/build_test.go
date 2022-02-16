@@ -686,3 +686,77 @@ func TestGenerateLdflags(t *testing.T) {
 		})
 	}
 }
+
+func TestGenerateFlags(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		flags    []string
+		expected error
+	}{
+		{
+			name:     "valid flags",
+			flags:    []string{"-race", "-x"},
+			expected: nil,
+		},
+		{
+			name:     "invalid -mod flags",
+			flags:    []string{"-mod=whatever", "-x"},
+			expected: errorUnsupportedArguments,
+		},
+		{
+			name: "invalid random flags",
+			flags: []string{
+				"-a", "-race", "-msan", "-asan",
+				"-v", "-x", "-buildinfo", "-buildmode",
+				"-buildvcs", "-compiler", "-gccgoflags",
+				"-gcflags", "-ldflags", "-linkshared",
+				"-tags", "-trimpath", "bla",
+			},
+			expected: errorUnsupportedArguments,
+		},
+		{
+			name: "valid all flags",
+			flags: []string{
+				"-a", "-race", "-msan", "-asan",
+				"-v", "-x", "-buildinfo", "-buildmode",
+				"-buildvcs", "-compiler", "-gccgoflags",
+				"-gcflags", "-ldflags", "-linkshared",
+				"-tags", "-trimpath",
+			},
+			expected: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt // Re-initializing variable so it is not changed while executing the closure below
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			cfg := goReleaserConfigFile{
+				Version: 1,
+				Flags:   tt.flags,
+			}
+			c, err := fromConfig(&cfg)
+			if err != nil {
+				t.Errorf("fromConfig: %v", err)
+			}
+			b := GoBuildNew("gocompiler", c)
+
+			flags, err := b.generateFlags()
+			expectedFlags := append([]string{"gocompiler", "build", "-mod=vendor"}, tt.flags...)
+			fmt.Println(err)
+			if !errCmp(err, tt.expected) {
+				t.Errorf(cmp.Diff(err, tt.expected))
+			}
+			if err != nil {
+				return
+			}
+			// Note: generated env variables contain the process's env variables too.
+			if !cmp.Equal(flags, expectedFlags) {
+				t.Errorf(cmp.Diff(flags, expectedFlags))
+			}
+		})
+	}
+}
