@@ -402,7 +402,8 @@ func TestArgEnvVariables(t *testing.T) {
 				return
 			}
 
-			if !cmp.Equal(b.argEnv, tt.expected.env) {
+			sorted := cmpopts.SortSlices(func(a, b string) bool { return a < b })
+			if !cmp.Equal(b.argEnv, tt.expected.env, sorted) {
 				t.Errorf(cmp.Diff(b.argEnv, tt.expected.env))
 			}
 		})
@@ -754,7 +755,8 @@ func TestGenerateFlags(t *testing.T) {
 				return
 			}
 			// Note: generated env variables contain the process's env variables too.
-			if !cmp.Equal(flags, expectedFlags) {
+			sorted := cmpopts.SortSlices(func(a, b string) bool { return a < b })
+			if !cmp.Equal(flags, expectedFlags, sorted) {
 				t.Errorf(cmp.Diff(flags, expectedFlags))
 			}
 		})
