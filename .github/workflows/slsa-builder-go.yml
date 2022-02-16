@@ -204,11 +204,12 @@ jobs:
           echo "./$BUILDER_BINARY" ./releaser.yml "$UNTRUSTED_ENVS"
           ./"$BUILDER_BINARY" ./releaser.yml "$UNTRUSTED_ENVS"
 
-      - name: Hash of project binary
+      - name: Hash of project binary and provenance
         id: sha256-gen
         shell: bash
         env:
           UNTRUSTED_BINARY_NAME: "${{ steps.build-gen.outputs.go-binary-name }}"
+          GITHUB_CONTEXT: "${{ env.GITHUB_CONTEXT }}"
         run: |
           set -euo pipefail
 
