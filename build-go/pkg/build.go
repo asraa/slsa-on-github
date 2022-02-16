@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"regexp"
 	"strings"
 	"syscall"
 )
@@ -122,6 +121,10 @@ func (b *GoBuild) SetArgEnvVariables(envs string) error {
 	// is not allowed.
 	// - We don't want to allow env variables set in the workflow because of injections
 	// e.g. LD_PRELOAD, etc.
+	if envs == "" {
+		return nil
+	}
+
 	for _, e := range strings.Split(envs, ",") {
 		s := strings.Trim(e, " ")
 
@@ -206,23 +209,36 @@ func isAllowedEnvVariable(name string) bool {
 // TODO: maybe not needed if handled directly by go compiler.
 func (b *GoBuild) generateLdflags() (string, error) {
 	var a []string
-	regex := regexp.MustCompile(`{{\s*\.Env\.(.*)\s*}}`)
 
 	for _, v := range b.cfg.Ldflags {
 		var res string
-		m := regex.FindStringSubmatch(v)
-		fmt.Println("match", m[1])
-		if len(m) > 2 {
-			return "", fmt.Errorf("%w: %s", errorEnvVariableNameEmpty, v)
-		}
-		if len(m) == 2 {
-			name := strings.Trim(m[1], " ")
+		ss := "{{ .Env."
+		es := "}}"
+		found := false
+		for true {
+			start := strings.Index(v, ss)
+			if start == -1 {
+				break
+			}
+			end := strings.Index(string(v[start+len(ss):]), es)
+			if end == -1 {
+				return "", fmt.Errorf("%w: %s", errorInvalidEnvArgument, v)
+			}
+
+			name := strings.Trim(string(v[start+len(ss):start+len(ss)+end]), " ")
+			if name == "" {
+				return "", fmt.Errorf("%w: %s", errorEnvVariableNameEmpty, v)
+			}
+
 			val, exists := b.argEnv[name]
 			if !exists {
 				return "", fmt.Errorf("%w: %s", errorEnvVariableNameEmpty, name)
 			}
-			res = val
-		} else {
+			res = fmt.Sprintf("%s%s%s", res, v[:start], val)
+			found = true
+			v = v[start+len(ss)+end+len(es):]
+		}
+		if !found {
 			res = v
 		}
 		a = append(a, res)
