@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"syscall"
 )
@@ -88,6 +89,22 @@ func (b *GoBuild) Run() error {
 	return syscall.Exec(b.goc, flags, envs)
 }
 
+func (b *GoBuild) Vendor(releaser string) error {
+	// Set flags.
+	flags, err := b.generateVendorFlags()
+	if err != nil {
+		return err
+	}
+
+	// Change directory
+	realpath := filepath.Join(filepath.Dir(releaser), b.cfg.Dir)
+	if err := syscall.Chdir(realpath); err != nil {
+		return err
+	}
+
+	return syscall.Exec(b.goc, flags, nil)
+}
+
 func (b *GoBuild) generateEnvVariables() ([]string, error) {
 	env := os.Environ()
 
@@ -113,7 +130,7 @@ func (b *GoBuild) generateEnvVariables() ([]string, error) {
 	return env, nil
 }
 
-func (b *GoBuild) SetArgEnvVariables(envs string) error {
+func (b *GoBuild) SetArgEnvVariables(envs []string) error {
 	// Notes:
 	// - I've tried running the re-usable workflow in a step
 	// and set the env variable in a previous step, but found that a re-usable workflow is not
@@ -121,11 +138,11 @@ func (b *GoBuild) SetArgEnvVariables(envs string) error {
 	// is not allowed.
 	// - We don't want to allow env variables set in the workflow because of injections
 	// e.g. LD_PRELOAD, etc.
-	if envs == "" {
+	if len(envs) == 0 {
 		return nil
 	}
 
-	for _, e := range strings.Split(envs, ",") {
+	for _, e := range envs {
 		s := strings.Trim(e, " ")
 
 		sp := strings.Split(s, ":")
@@ -182,6 +199,13 @@ func (b *GoBuild) generateFlags() ([]string, error) {
 		flags = append(flags, v)
 
 	}
+	return flags, nil
+}
+
+func (b *GoBuild) generateVendorFlags() ([]string, error) {
+	// -x
+	flags := []string{b.goc, "mod", "vendor"}
+
 	return flags, nil
 }
 

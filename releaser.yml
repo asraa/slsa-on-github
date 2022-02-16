@@ -13,6 +13,6 @@ flags:
 goos: linux
 goarch: amd64
 binary: binary-{{ .OS }}-{{ .Arch }}
-dir: build-go
+dir: ./build-go
 ldflags:
   - '{{ .Env.VERSION_LDFLAGS }}'
