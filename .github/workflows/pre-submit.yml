@@ -3,6 +3,11 @@ on: [pull_request, workflow_dispatch]
 
 permissions: read-all
 
+env:
+  BUILDER_DIR: build-go
+  PROVENANCE_GENERATOR_DIR: slsa-provenance
+  PROVENANCE_VERIFIER_DIR: provenance-verifier
+
 jobs:
   pre-submit:
     runs-on: ubuntu-latest
@@ -15,12 +20,11 @@ jobs:
         with:
           go-version: '1.17'
        
-      - name: Run tests for build-go
+      - name: Run tests for builder
         run: |
           set -euo pipefail
           
-          # build-go unit tests.
-          cd build-go
+          cd "$BUILDER_DIR"
           go mod vendor
           go test -mod=vendor -v ./...
           cd -
@@ -31,11 +35,18 @@ jobs:
         run: |
           set -euo pipefail
           
-          # slsa-provenance
-          cd slsa-provenance
+          cd "$PROVENANCE_GENERATOR_DIR"
           go mod vendor
           go build -mod=vendor
           cd -
           
           # TODO: Add tests
-            
+      
+      - name: Run tests for provenance verifier
+        run: |
+          set -euo pipefail
+          
+          cd "$PROVENANCE_VERIFIER_DIR"
+          go mod vendor
+          go test -mod=vendor -v ./...
+          cd -

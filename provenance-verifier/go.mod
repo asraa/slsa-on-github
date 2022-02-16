@@ -2,11 +2,13 @@ module github.com/asraa/slsa-on-github/provenance-verifier
 
 go 1.17
 
-require github.com/rhysd/actionlint v1.6.8
+require (
+	github.com/google/go-cmp v0.5.7
+	github.com/rhysd/actionlint v1.6.8
+)
 
 require (
 	github.com/fatih/color v1.13.0 // indirect
-	github.com/google/go-cmp v0.5.7 // indirect
 	github.com/mattn/go-colorable v0.1.11 // indirect
 	github.com/mattn/go-isatty v0.0.14 // indirect
 	github.com/mattn/go-runewidth v0.0.13 // indirect
