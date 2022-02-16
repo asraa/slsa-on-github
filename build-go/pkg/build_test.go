@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 )
 
 func TestAllowedEnvVariable(t *testing.T) {
@@ -512,7 +513,8 @@ func TestEnvVariables(t *testing.T) {
 			}
 			// Note: generated env variables contain the process's env variables too.
 			expectedFlags := append(os.Environ(), tt.expected.flags...)
-			if !cmp.Equal(flags, expectedFlags) {
+			sorted := cmpopts.SortSlices(func(a, b string) bool { return a < b })
+			if !cmp.Equal(flags, expectedFlags, sorted) {
 				t.Errorf(cmp.Diff(flags, expectedFlags))
 			}
 		})
