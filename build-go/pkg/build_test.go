@@ -627,7 +627,7 @@ func TestGenerateLdflags(t *testing.T) {
 			},
 		},
 		{
-			name:    "undefined env variable",
+			name:    "undefined env variable 1",
 			argEnv:  "VAR2:value2",
 			ldflags: []string{"{{ .Env.VAR2 }}-name-{{ .Env.VAR1 }}"},
 			expected: struct {
