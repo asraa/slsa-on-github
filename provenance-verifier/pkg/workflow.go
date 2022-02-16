@@ -8,19 +8,30 @@ import (
 	"github.com/rhysd/actionlint"
 )
 
-var errorInvalidGitHubWorkflow = errors.New("invalid GitHub workflow")
+var (
+	errorInvalidGitHubWorkflow = errors.New("invalid GitHub workflow")
+	errorTopLevelEnvVariables  = errors.New("top level env variables are declared")
+)
 
 type Workflow struct {
-	wf *actionlint.Workflow
+	workflow *actionlint.Workflow
 }
 
-func provenanceWorkflowFromString(content string) (*Workflow, error) {
-	var pwf Workflow
-	pwf.wf, errs := actionlint.Parse(content)
+func WorkflowFromBytes(content []byte) (*Workflow, error) {
+	var self Workflow
+	workflow, errs := actionlint.Parse(content)
 	if len(errs) > 0 && workflow == nil {
-		return false, fileparser.FormatActionlintError(errs)
+		return nil, formatActionlintError(errs)
 	}
-	return &pwf, nil
+	self.workflow = workflow
+	return &self, nil
+}
+
+func (w *Workflow) validateTopLevelEnvironmentVariables() error {
+	if w.workflow.Env != nil && len(w.workflow.Env.Vars) > 0 {
+		return fmt.Errorf("%w", errorTopLevelEnvVariables)
+	}
+	return nil
 }
 
 func formatActionlintError(errs []*actionlint.Error) error {
@@ -33,5 +44,5 @@ func formatActionlintError(errs []*actionlint.Error) error {
 		builder.WriteString("\n" + err.Error())
 	}
 
-	return fmt.Errorf("%w", builder.String())
+	return fmt.Errorf("%s", builder.String())
 }
