@@ -27,14 +27,14 @@ jobs:
           
           # TODO
 
-    - name: Build for slsa-provenance
+      - name: Build for slsa-provenance
         run: |
           set -euo pipefail
           
           # slsa-provenance
           cd slsa-provenance
           go mod vendor
-          go build
+          go build -mod=vendor
           cd -
           
           # TODO: Add tests
