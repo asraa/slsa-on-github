@@ -195,7 +195,6 @@ jobs:
           BUILDER_BINARY: "${{ env.BUILDER_BINARY }}"
           UNTRUSTED_ENVS: "${{ inputs.env }}"
           UNTRUSTED_WORKING_DIR: "${{ inputs.working-dir }}"
-          GITHUB_CONTEXT: "${{ toJSON(github) }}"
         run: |
           set -euo pipefail
 
@@ -209,7 +208,7 @@ jobs:
         shell: bash
         env:
           UNTRUSTED_BINARY_NAME: "${{ steps.build-gen.outputs.go-binary-name }}"
-          GITHUB_CONTEXT: "${{ env.GITHUB_CONTEXT }}"
+          GITHUB_CONTEXT: "${{ toJSON(github) }}"
         run: |
           set -euo pipefail
 
