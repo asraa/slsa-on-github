@@ -233,8 +233,8 @@ jobs:
       - name: Upload the provenance
         uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 # v2.3.1
         with:
-          name: "${{ steps.build-gen.outputs.provenance-unsigned }}"
-          path: "${{ steps.build-gen.outputs.provenance-unsigned }}"
+          name: "${{ steps.sha256-gen.outputs.provenance-unsigned }}"
+          path: "${{ steps.sha256-gen.outputs.provenance-unsigned }}"
           if-no-files-found: error
           retention-days: 5
 
