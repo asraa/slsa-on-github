@@ -1,0 +1,33 @@
+name: Integration test for e2e flow
+on: [pull_request, workflow_dispatch]
+
+permissions: read-all
+
+jobs:
+  checkout:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 # v2.3.4
+        with:
+          repository: 'laurentsimon/slsa-on-github-test'  
+
+  args:
+    runs-on: ubuntu-latest
+    outputs:
+      ldflags: ${{ steps.ldflags.outputs.value }}
+    steps:
+      - id: ldflags
+        run: |
+          echo "::set-output name=value::-X main.gitVersion=v1.2.3 -X main.gitSomething=somthg"
+
+  integration:
+    permissions:
+      id-token: write
+      contents: read
+    needs: args
+    uses: ./.github/workflows/slsa-builder-go.yml
+    with:
+      go-version: 1.17
+      #TODO: make this a json/yaml object object
+      env: "VERSION_LDFLAGS:${{needs.args.outputs.ldflags}}"
