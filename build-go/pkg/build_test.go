@@ -366,6 +366,16 @@ func TestArgEnvVariables(t *testing.T) {
 				env: map[string]string{"VAR1": "value1"},
 			},
 		},
+		{
+			name:   "invalid valid single arg with empty",
+			argEnv: "VAR1:value1:",
+			expected: struct {
+				err error
+				env map[string]string
+			}{
+				err: errorInvalidEnvArgument,
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -548,6 +558,18 @@ func TestGenerateLdflags(t *testing.T) {
 		{
 			name:    "two values with text",
 			argEnv:  "VAR1:value1, VAR2:value2",
+			ldflags: []string{"name-{{ .Env.VAR1 }}-{{ .Env.VAR2 }}"},
+			expected: struct {
+				err     error
+				ldflags string
+			}{
+				ldflags: "name-value1-value2",
+				err:     nil,
+			},
+		},
+		{
+			name:    "two values with text and not space between env",
+			argEnv:  "VAR1:value1,VAR2:value2",
 			ldflags: []string{"name-{{ .Env.VAR1 }}-{{ .Env.VAR2 }}"},
 			expected: struct {
 				err     error
