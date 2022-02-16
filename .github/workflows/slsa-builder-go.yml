@@ -185,7 +185,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          echo "./$BUILDER_BINARY" ./releaser.yml -vendor
+          echo "./$BUILDER_BINARY" -vendor ./releaser.yml
           ./"$BUILDER_BINARY" -vendor ./releaser.yml
   
       # TODO(hermeticity) OS-level.
