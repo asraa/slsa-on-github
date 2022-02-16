@@ -31,7 +31,7 @@ func (w *Workflow) validateTopLevelEnv() error {
 	return validateEnv(w.workflow.Env, "top level")
 }
 
-func (w *Workflow) validatJobLevelEnv(job *actionlint.Job) error {
+func (w *Workflow) validateJobLevelEnv(job *actionlint.Job) error {
 	var n string
 	switch {
 	case job.Name != nil:

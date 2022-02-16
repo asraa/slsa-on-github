@@ -146,7 +146,7 @@ func TestJobLevelEnv(t *testing.T) {
 				if !exists {
 					panic(fmt.Errorf("%s job does not exist", name))
 				}
-				err = workflow.validatJobLevelEnv(job)
+				err = workflow.validateJobLevelEnv(job)
 				if !errCmp(err, val) {
 					t.Errorf(cmp.Diff(err, val))
 				}
