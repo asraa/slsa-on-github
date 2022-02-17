@@ -9,7 +9,7 @@ env:
   BUILDER_BINARY: builder
   PROVENANCE_BINARY: provenance
   BUILDER_REPOSITORY: asraa/slsa-on-github
-  BUILDER_REF: main
+  BUILDER_REF: e2e-test
 
 ###################################################################
 #                                                                 #
@@ -178,10 +178,16 @@ jobs:
 
       - name: Download dependencies
         shell: bash
+        env:
+          BUILDER_BINARY: "${{ env.BUILDER_BINARY }}"
+          GOPATH: "${{ env.GOPATH }}"
+
         run: |
           set -euo pipefail
-          go mod vendor
 
+          echo "./$BUILDER_BINARY" -vendor ./releaser.yml
+          ./"$BUILDER_BINARY" -vendor ./releaser.yml
+  
       # TODO(hermeticity) OS-level.
       # - name: Disable hermeticity
       # uses: slsa/hermeticity@xxx
@@ -194,12 +200,9 @@ jobs:
         env:
           BUILDER_BINARY: "${{ env.BUILDER_BINARY }}"
           UNTRUSTED_ENVS: "${{ inputs.env }}"
-          UNTRUSTED_WORKING_DIR: "${{ inputs.working-dir }}"
         run: |
           set -euo pipefail
 
-          # TODO: pass UNTRUSTED_WORKING_DIR to builder, which will use realpath()
-          # to compute the actual directory.
           echo "./$BUILDER_BINARY" ./releaser.yml "$UNTRUSTED_ENVS"
           ./"$BUILDER_BINARY" ./releaser.yml "$UNTRUSTED_ENVS"
 
