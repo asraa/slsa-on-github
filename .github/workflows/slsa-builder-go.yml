@@ -257,15 +257,6 @@ jobs:
 
           BASE64_CONTENT=$(cat "${{ env.GO_BINARY }}"" | base64) 
           echo "::set-output name=go-binary-base64::$BASE64_CONTENT"
-
-      #TODO(upload): verify how the action handles malicious names.
-      # - name: Upload the artifact
-      #   uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 # v2.3.1
-      #   with:
-      #     name: "${{ env.GO_BINARY }}"
-      #     path: "${{ env.GO_BINARY }}"
-      #     if-no-files-found: error
-      #     retention-days: 5
   
   build-sha256:
     outputs:
@@ -287,13 +278,13 @@ jobs:
           echo "::set-output name=go-binary-sha256::$DIGEST"
 
       #TODO(upload): verify how the action handles malicious names.
-    - name: Upload the artifact
-      uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 # v2.3.1
-      with:
-        name: "${{ env.UNTRUSTED_BINARY_NAME }}"
-        path: "${{ env.GO_BINARY }}"
-        if-no-files-found: error
-        retention-days: 5
+      - name: Upload the artifact
+        uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 # v2.3.1
+        with:
+          name: "${{ env.UNTRUSTED_BINARY_NAME }}"
+          path: "${{ env.GO_BINARY }}"
+          if-no-files-found: error
+          retention-days: 5
 
   provenance:
     runs-on: ubuntu-latest
