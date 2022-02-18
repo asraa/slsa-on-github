@@ -53,7 +53,14 @@ func GoBuildNew(goc string, cfg *GoReleaserConfig) *GoBuild {
 	return &c
 }
 
-func (b *GoBuild) Run() error {
+func (b *GoBuild) Run(dry bool) error {
+	// Use the name provider via env variable for the compilation.
+	// This variable is trusted and defined by the re-usable workflow.
+	binary := os.Getenv("GO_BINARY")
+	if binary == "" {
+		return fmt.Errorf("GO_BINARY not defined")
+	}
+
 	// Set flags.
 	flags, err := b.generateFlags()
 	if err != nil {
@@ -82,9 +89,18 @@ func (b *GoBuild) Run() error {
 	if err != nil {
 		return err
 	}
-	flags = append(flags, []string{"-o", filename}...)
 
-	fmt.Printf("::set-output name=go-binary-name::%s\n", filename)
+	flags = append(flags, []string{"-o", binary}...)
+
+	// A dry run prints the information that is trusted, before
+	// the compiler is invoked.
+	if dry {
+		// Share the resolved name of the binary.
+		fmt.Printf("::set-output name=go-binary-name::%s\n", filename)
+		fmt.Printf("TODO:set-output name=go-arguments: %s\n", flags)
+		return nil
+	}
+
 	return syscall.Exec(b.goc, flags, envs)
 }
 
