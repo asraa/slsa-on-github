@@ -86,13 +86,13 @@ jobs:
             cd build-go
             # https://go.dev/ref/mod#build-commands.
             go build -mod=vendor -o "$BUILDER_BINARY"
-            BUILDER_DIGEST=$(sha256sum --binary "$BUILDER_BINARY" | awk '{print $1}')
+            BUILDER_DIGEST=$(sha256sum "$BUILDER_BINARY" | awk '{print $1}')
             echo "::set-output name=go-builder-sha256::$BUILDER_DIGEST"
             echo "hash of $BUILDER_BINARY is $BUILDER_DIGEST"
             cd -
             cd slsa-provenance
             go build -mod=vendor -o "$PROVENANCE_BINARY"
-            PROVENANCE_DIGEST=$(sha256sum --binary "$PROVENANCE_BINARY" | awk '{print $1}')
+            PROVENANCE_DIGEST=$(sha256sum "$PROVENANCE_BINARY" | awk '{print $1}')
             echo "::set-output name=go-prov-sha256::$PROVENANCE_DIGEST"
             echo "hash of $PROVENANCE_BINARY is $PROVENANCE_DIGEST"
 
@@ -143,12 +143,12 @@ jobs:
           set -euo pipefail
 
           echo "hash of builder should be $BUILDER_HASH"
-          COMPUTED_HASH=$(sha256sum --binary "$BUILDER_BINARY" | awk '{print $1}')
+          COMPUTED_HASH=$(sha256sum "$BUILDER_BINARY" | awk '{print $1}')
           echo "builder hash computed is $COMPUTED_HASH"
 
           # Compare hashes. Explicit exit to be safe.
           # TODO: remove the builder as well.
-          echo "$BUILDER_HASH $BUILDER_BINARY" | sha256sum --binary --strict --check --status || exit -2
+          echo "$BUILDER_HASH $BUILDER_BINARY" | sha256sum --strict --check --status || exit -2
     
           # Make the builder executable.
           chmod a+x "$BUILDER_BINARY"
@@ -212,12 +212,12 @@ jobs:
           set -euo pipefail
 
           echo "hash of builder should be $BUILDER_HASH"
-          COMPUTED_HASH=$(sha256sum --binary "$BUILDER_BINARY" | awk '{print $1}')
+          COMPUTED_HASH=$(sha256sum "$BUILDER_BINARY" | awk '{print $1}')
           echo "builder hash computed is $COMPUTED_HASH"
 
           # Compare hashes. Explicit exit to be safe.
           # TODO: remove the builder as well.
-          echo "$BUILDER_HASH $BUILDER_BINARY" | sha256sum --binary --strict --check --status || exit -2
+          echo "$BUILDER_HASH $BUILDER_BINARY" | sha256sum --strict --check --status || exit -2
     
           # Make the builder executable.
           chmod a+x "$BUILDER_BINARY"
@@ -274,7 +274,7 @@ jobs:
           set -euo pipefail
 
           cat "$UNTRUSTED_BINARY_CONTENT | base64 --decode > "${{ env.GO_BINARY }}"
-          DIGEST=$(sha256sum --binary "${{ env.GO_BINARY }}" | awk '{print $1}')
+          DIGEST=$(sha256sum "${{ env.GO_BINARY }}" | awk '{print $1}')
           echo "::set-output name=go-binary-sha256::$DIGEST"
 
       #TODO(upload): verify how the action handles malicious names.
@@ -306,12 +306,12 @@ jobs:
           set -euo pipefail
       
           echo "hash of provenance generator should be $PROV_HASH"
-          PROV_HASH=$(sha256sum --binary "$PROVENANCE_BINARY" | awk '{print $1}')
+          PROV_HASH=$(sha256sum "$PROVENANCE_BINARY" | awk '{print $1}')
           echo "provenance generator hash computed is $PROV_HASH"
 
           # Compare hashes. Explicit exit to be safe.
           # TODO: remove the provenance generator as well.
-          echo "$PROV_HASH $PROVENANCE_BINARY" | sha256sum --binary --strict --check --status || exit -2
+          echo "$PROV_HASH $PROVENANCE_BINARY" | sha256sum --strict --check --status || exit -2
     
           # Make the provenance generator executable.
           chmod a+x "$PROVENANCE_BINARY"
