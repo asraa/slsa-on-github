@@ -6,6 +6,7 @@ permissions:
 env:
   #TODO: let caller upload ?
   REGISTRY: ghcr.io
+  GO_BINARY: go-binary
   BUILDER_BINARY: builder
   PROVENANCE_BINARY: provenance
   BUILDER_REPOSITORY: asraa/slsa-on-github
@@ -114,7 +115,6 @@ jobs:
   build:
     outputs:
       go-binary-sha256: ${{ steps.sha256-gen.outputs.go-binary-sha256 }}
-      go-binary-name: ${{ steps.build-gen.outputs.go-binary-name }}
     runs-on: ubuntu-latest
     needs: builder
     steps:
@@ -207,25 +207,24 @@ jobs:
         id: sha256-gen
         shell: bash
         env:
-          UNTRUSTED_BINARY_NAME: "${{ steps.build-gen.outputs.go-binary-name }}"
           GITHUB_CONTEXT: "${{ toJSON(github) }}"
         run: |
           set -euo pipefail
 
           # TODO: digest and names will be returned by the builder using info from config file.
-          DIGEST=$(sha256sum "$UNTRUSTED_BINARY_NAME" | awk '{print $1}')
+          DIGEST=$(sha256sum "$GO_BINARY" | awk '{print $1}')
           echo "::set-output name=go-binary-sha256::$DIGEST"
 
           # Create provenance
-          DIGEST="$DIGEST" ./"$PROVENANCE_BINARY" > "$UNTRUSTED_BINARY_NAME.intoto"
-          echo "::set-output name=provenance-unsigned::$UNTRUSTED_BINARY_NAME.intoto"
+          DIGEST="$DIGEST" ./"$PROVENANCE_BINARY" > "$GO_BINARY.intoto"
+          echo "::set-output name=provenance-unsigned::$GO_BINARY.intoto"
 
       #TODO(upload): verify how the action handles malicious names.
       - name: Upload the artifact
         uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 # v2.3.1
         with:
           name: "${{ steps.build-gen.outputs.go-binary-name }}"
-          path: "${{ steps.build-gen.outputs.go-binary-name }}"
+          path: "$GO_BINARY"
           if-no-files-found: error
           retention-days: 5
 
@@ -255,7 +254,7 @@ jobs:
       - name: Download unsigned provenance 
         uses: actions/download-artifact@v2
         with:
-          name: "${{ needs.build.outputs.go-binary-name }}.intoto"
+          name: "$GO_BINARY.intoto"
 
       - name: Verify provenance
         env:
@@ -284,8 +283,13 @@ jobs:
         run: |
           set -euo pipefail
           # Create provenance
-          UNSIGNED_PROVENANCE="$UNTRUSTED_BINARY_NAME.intoto" ./"$PROVENANCE_BINARY" > "$UNTRUSTED_BINARY_NAME.signed.intoto"
-          echo "::set-output name=signed-provenance-name::$UNTRUSTED_BINARY_NAME.signed.intoto"
+          UNSIGNED_PROVENANCE="$GO_BINARY.intoto" ./"$PROVENANCE_BINARY" > "$GO_BINARY.signed.intoto"
+          echo "::set-output name=signed-provenance-name::$GO_BINARY.signed.intoto"
+
+          # Rename files.
+          mv "$GO_BINARY.intoto" "$UNTRUSTED_BINARY_NAME.intoto"
+          mv "$GO_BINARY.signed.intoto" "$UNTRUSTED_BINARY_NAME.signed.intoto"
+          mv "$GO_BINARY" "$UNTRUSTED_BINARY_NAME"
 
       - name: Upload the provenance
         uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 # v2.3.1
