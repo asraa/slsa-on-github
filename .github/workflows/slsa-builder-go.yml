@@ -179,6 +179,7 @@ jobs:
           # to compute the actual directory.
           # Note: this outputs information about resolved arguments, etc.
           # the values are trusted because the compiler is not invoked.
+          echo ./"$BUILDER_BINARY" ./releaser.yml "$UNTRUSTED_ENVS" --dry
           ./"$BUILDER_BINARY" ./releaser.yml "$UNTRUSTED_ENVS" --dry
 
   build:
@@ -255,7 +256,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          BASE64_CONTENT=$(cat "${{ env.GO_BINARY }}"" | base64) 
+          BASE64_CONTENT=$(cat "${{ env.GO_BINARY }}" | base64) 
           echo "::set-output name=go-binary-base64::$BASE64_CONTENT"
   
   build-sha256:
