@@ -185,7 +185,7 @@ jobs:
     outputs:
       go-binary-base64: ${{ steps.base64-gen.outputs.go-binary-base64 }}
     runs-on: ubuntu-latest
-    needs: [builder, build-dry]
+    needs: builder
     steps:
       - name: Checkout the repository
         uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 # v2.3.4
@@ -222,24 +222,6 @@ jobs:
           # Make the builder executable.
           chmod a+x "$BUILDER_BINARY"
 
-      - name: Verify provenance
-        env:
-          PROV_HASH: "${{ needs.builder.outputs.go-prov-sha256 }}"
-          PROVENANCE_BINARY: "${{ env.PROVENANCE_BINARY }}"
-        run: |
-          set -euo pipefail
-      
-          echo "hash of provenance generator should be $PROV_HASH"
-          COMPUTED_HASH=$(sha256sum --binary "$PROVENANCE_BINARY" | awk '{print $1}')
-          echo "provenance generator hash computed is $COMPUTED_HASH"
-
-          # Compare hashes. Explicit exit to be safe.
-          # TODO: remove the provenance generator as well.
-          echo "$PROV_HASH $PROVENANCE_BINARY" | sha256sum --binary --strict --check --status || exit -2
-    
-          # Make the provenance generator executable.
-          chmod a+x "$PROVENANCE_BINARY"
-
       - name: Download dependencies
         shell: bash
         run: |
@@ -267,7 +249,7 @@ jobs:
           echo "./$BUILDER_BINARY" ./releaser.yml "$UNTRUSTED_ENVS"
           ./"$BUILDER_BINARY" ./releaser.yml "$UNTRUSTED_ENVS"
 
-      - name: Base64 of project binary
+      - name: Base64 of binary
         id: base64-gen
         shell: bash
         run: |
@@ -289,23 +271,33 @@ jobs:
     outputs:
       go-binary-sha256: ${{ steps.sha256-gen.outputs.go-binary-sha256 }}
     runs-on: ubuntu-latest
-    needs: build
+    needs: [build, build-dry]
+    env:
+      UNTRUSTED_BINARY_CONTENT: "${{ needs.build.outputs.go-binary-base64 }}"
+      UNTRUSTED_BINARY_NAME: "${{ needs.build-dry.outputs.go-binary-name }}"
     steps:
-     - name: Hash of project binary
+      - name: Hash of project binary
         id: sha256-gen
-        env:
-          UNTRUSTED_BASE64_CONTENT: "${{ needs.builder.outputs.go-prov-sha256 }}"
         shell: bash
         run: |
           set -euo pipefail
 
-          base64 --decode > "${{ env.GO_BINARY }}"
+          cat "$UNTRUSTED_BINARY_CONTENT | base64 --decode > "${{ env.GO_BINARY }}"
           DIGEST=$(sha256sum --binary "${{ env.GO_BINARY }}" | awk '{print $1}')
           echo "::set-output name=go-binary-sha256::$DIGEST"
 
+      #TODO(upload): verify how the action handles malicious names.
+    - name: Upload the artifact
+      uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 # v2.3.1
+      with:
+        name: "${{ env.UNTRUSTED_BINARY_NAME }}"
+        path: "${{ env.GO_BINARY }}"
+        if-no-files-found: error
+        retention-days: 5
+
   provenance:
     runs-on: ubuntu-latest
-    needs: build
+    needs: [build, build-sha256]
     permissions:
       id-token: write # Needed for keyless.
       contents: read
@@ -343,9 +335,6 @@ jobs:
           GITHUB_CONTEXT: "${{ toJSON(github) }}"
         run: |
           set -euo pipefail
-
-          # Rename the binary
-          mv "${{ env.GO_BINARY }}" "$UNTRUSTED_BINARY_NAME"
 
           # Create provenance
           DIGEST="$UNTRUSTED_BINARY_HASH" ./"$PROVENANCE_BINARY" > "$UNTRUSTED_BINARY_NAME.intoto"
