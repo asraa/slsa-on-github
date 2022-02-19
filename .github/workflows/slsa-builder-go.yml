@@ -266,11 +266,11 @@ jobs:
           set -euo pipefail
           pwd
           ls -l
-          BASE64_CONTENT=$(cat "${{ env.GENERATED_BINARY_NAME }}" | base64) 
-          echo "::set-output name=go-binary-base64::$BASE64_CONTENT"
-
           DIGEST=$(sha256sum "${{ env.GENERATED_BINARY_NAME }}" | awk '{print $1}')
           echo "digest of ${{ env.GENERATED_BINARY_NAME }} is $DIGEST"
+
+          BASE64_CONTENT=$(cat "${{ env.GENERATED_BINARY_NAME }}" | base64) 
+          echo "::set-output name=go-binary-base64::$BASE64_CONTENT"
   
   build-sha256:
     outputs:
@@ -294,6 +294,8 @@ jobs:
           echo "digest of $UNTRUSTED_BINARY_NAME is $DIGEST"
 
           echo "::set-output name=go-binary-sha256::$DIGEST"
+
+          echo "base64: $UNTRUSTED_BINARY_CONTENT"
 
       #TODO(upload): verify how the action handles malicious names.
       - name: Upload the artifact
