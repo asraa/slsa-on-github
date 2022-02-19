@@ -6,7 +6,7 @@ permissions:
 env:
   #TODO: let caller upload ?
   REGISTRY: ghcr.io
-  GENERATED_BINARY: go-binary
+  GENERATED_BINARY: compiled-binary
   BUILDER_BINARY: builder
   PROVENANCE_BINARY: provenance
   BUILDER_REPOSITORY: laurentsimon/slsa-on-github
@@ -180,6 +180,7 @@ jobs:
           # Note: this outputs information about resolved arguments, etc.
           # the values are trusted because the compiler is not invoked.
           echo ./"$BUILDER_BINARY" ./releaser.yml "$UNTRUSTED_ENVS" --dry
+          export OUTPUT_BINARY="${{ env.GENERATED_BINARY }}"
           ./"$BUILDER_BINARY" ./releaser.yml "$UNTRUSTED_ENVS" --dry
 
   build:
