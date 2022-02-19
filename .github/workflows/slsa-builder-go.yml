@@ -279,8 +279,8 @@ jobs:
         run: |
           set -euo pipefail
 
-          echo -n "$UNTRUSTED_BINARY_CONTENT" | base64 --decode > "${{ env.GENERATED_BINARY }}"
-          DIGEST=$(sha256sum "${{ env.GENERATED_BINARY }}" | awk '{print $1}')
+          echo -n "$UNTRUSTED_BINARY_CONTENT" | base64 --decode > "${{ env.UNTRUSTED_BINARY_NAME }}"
+          DIGEST=$(sha256sum "${{ env.UNTRUSTED_BINARY_NAME }}" | awk '{print $1}')
           echo "::set-output name=go-binary-sha256::$DIGEST"
 
       #TODO(upload): verify how the action handles malicious names.
@@ -288,7 +288,7 @@ jobs:
         uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 # v2.3.1
         with:
           name: "${{ env.UNTRUSTED_BINARY_NAME }}"
-          path: "${{ env.GENERATED_BINARY }}"
+          path: "${{ env.UNTRUSTED_BINARY_NAME }}"
           if-no-files-found: error
           retention-days: 5
 
