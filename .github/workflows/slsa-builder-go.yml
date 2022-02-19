@@ -6,7 +6,7 @@ permissions:
 env:
   #TODO: let caller upload ?
   REGISTRY: ghcr.io
-  GO_BINARY: go-binary
+  GENERATED_BINARY: go-binary
   BUILDER_BINARY: builder
   PROVENANCE_BINARY: provenance
   BUILDER_REPOSITORY: asraa/slsa-on-github
@@ -248,16 +248,19 @@ jobs:
           # TODO: pass UNTRUSTED_WORKING_DIR to builder, which will use realpath()
           # to compute the actual directory.
           echo "./$BUILDER_BINARY" ./releaser.yml "$UNTRUSTED_ENVS"
-          export GO_BINARY="${{ env.GO_BINARY }}"
+          export OUTPUT_BINARY="${{ env.GENERATED_BINARY }}"
           ./"$BUILDER_BINARY" ./releaser.yml "$UNTRUSTED_ENVS"
+          pwd
+          ls
 
       - name: Base64 of binary
         id: base64-gen
         shell: bash
         run: |
           set -euo pipefail
-
-          BASE64_CONTENT=$(cat "${{ env.GO_BINARY }}" | base64) 
+          pwd
+          ls
+          BASE64_CONTENT=$(cat "${{ env.GENERATED_BINARY }}" | base64) 
           echo "::set-output name=go-binary-base64::$BASE64_CONTENT"
   
   build-sha256:
@@ -275,8 +278,8 @@ jobs:
         run: |
           set -euo pipefail
 
-          cat "$UNTRUSTED_BINARY_CONTENT | base64 --decode > "${{ env.GO_BINARY }}"
-          DIGEST=$(sha256sum "${{ env.GO_BINARY }}" | awk '{print $1}')
+          cat "$UNTRUSTED_BINARY_CONTENT | base64 --decode > "${{ env.GENERATED_BINARY }}"
+          DIGEST=$(sha256sum "${{ env.GENERATED_BINARY }}" | awk '{print $1}')
           echo "::set-output name=go-binary-sha256::$DIGEST"
 
       #TODO(upload): verify how the action handles malicious names.
@@ -284,7 +287,7 @@ jobs:
         uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 # v2.3.1
         with:
           name: "${{ env.UNTRUSTED_BINARY_NAME }}"
-          path: "${{ env.GO_BINARY }}"
+          path: "${{ env.GENERATED_BINARY }}"
           if-no-files-found: error
           retention-days: 5
 

@@ -56,9 +56,9 @@ func GoBuildNew(goc string, cfg *GoReleaserConfig) *GoBuild {
 func (b *GoBuild) Run(dry bool) error {
 	// Use the name provider via env variable for the compilation.
 	// This variable is trusted and defined by the re-usable workflow.
-	binary := os.Getenv("GO_BINARY")
+	binary := os.Getenv("OUTPUT_BINARY")
 	if binary == "" {
-		return fmt.Errorf("GO_BINARY not defined")
+		return fmt.Errorf("OUTPUT_BINARY not defined")
 	}
 
 	// Set flags.
