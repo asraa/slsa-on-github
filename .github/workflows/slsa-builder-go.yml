@@ -248,6 +248,7 @@ jobs:
           # TODO: pass UNTRUSTED_WORKING_DIR to builder, which will use realpath()
           # to compute the actual directory.
           echo "./$BUILDER_BINARY" ./releaser.yml "$UNTRUSTED_ENVS"
+          export GO_BINARY="${{ env.GO_BINARY }}"
           ./"$BUILDER_BINARY" ./releaser.yml "$UNTRUSTED_ENVS"
 
       - name: Base64 of binary

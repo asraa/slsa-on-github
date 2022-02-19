@@ -20,9 +20,10 @@ func check(e error) {
 }
 
 func main() {
-	if len(os.Args) <= 3 {
+	if len(os.Args) <= 2 {
 		usage(os.Args[0])
 	}
+
 	goc, err := exec.LookPath("go")
 	check(err)
 
@@ -36,7 +37,10 @@ func main() {
 	err = gobuild.SetArgEnvVariables(os.Args[2])
 	check(err)
 
-	dry := strings.EqualFold(os.Args[3], "--dry")
+	dry := false
+	if len(os.Args) > 3 {
+		dry = strings.EqualFold(os.Args[3], "--dry")
+	}
 	err = gobuild.Run(dry)
 	check(err)
 }
