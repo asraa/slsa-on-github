@@ -9,8 +9,8 @@ env:
   GENERATED_BINARY: go-binary
   BUILDER_BINARY: builder
   PROVENANCE_BINARY: provenance
-  BUILDER_REPOSITORY: asraa/slsa-on-github
-  BUILDER_REF: main
+  BUILDER_REPOSITORY: laurentsimon/slsa-on-github
+  BUILDER_REF: feat/harden
 
 ###################################################################
 #                                                                 #
