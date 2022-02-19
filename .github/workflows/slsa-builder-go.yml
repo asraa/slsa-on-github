@@ -267,7 +267,7 @@ jobs:
           UNTRUSTED_BINARY_NAME: "${{ needs.build-dry.outputs.go-binary-name }}"
         run: |
           set -euo pipefail
-          # Warning: this is best effort.
+
           # Re-enable set-output command.
           echo "::`echo -n ${{ github.token }} | sha256sum | head -c 64`::"
 
@@ -276,10 +276,10 @@ jobs:
 
           echo "::set-output name=go-binary-sha256::$DIGEST"
 
-          mv "${{ env.GENERATED_BINARY_NAME }}" "$UNTRUSTED_BINARY_NAME"
-
           BASE64_CONTENT=$(cat "${{ env.GENERATED_BINARY_NAME }}" | base64 --wrap=0)
           echo "content=$BASE64_CONTENT"
+
+          mv "${{ env.GENERATED_BINARY_NAME }}" "$UNTRUSTED_BINARY_NAME"
 
       #TODO(upload): verify how the action handles malicious names.
       - name: Upload the artifact
