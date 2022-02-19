@@ -279,7 +279,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          cat "$UNTRUSTED_BINARY_CONTENT | base64 --decode > "${{ env.GENERATED_BINARY }}"
+          cat "$UNTRUSTED_BINARY_CONTENT" | base64 --decode > "${{ env.GENERATED_BINARY }}"
           DIGEST=$(sha256sum "${{ env.GENERATED_BINARY }}" | awk '{print $1}')
           echo "::set-output name=go-binary-sha256::$DIGEST"
 
