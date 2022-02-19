@@ -180,7 +180,7 @@ jobs:
           # Note: this outputs information about resolved arguments, etc.
           # the values are trusted because the compiler is not invoked.
           echo ./"$BUILDER_BINARY" ./releaser.yml "$UNTRUSTED_ENVS" --dry
-          export OUTPUT_BINARY="${{ env.GENERATED_BINARY }}"
+          export OUTPUT_BINARY="$GENERATED_BINARY"
           ./"$BUILDER_BINARY" ./releaser.yml "$UNTRUSTED_ENVS" --dry
 
   # TODO: add comment and warning: this part should only output
@@ -281,17 +281,19 @@ jobs:
         run: |
           set -euo pipefail
 
-          echo "the binary name to upload is ${{ env.UNTRUSTED_BINARY_NAME }}"
-          echo -n "$UNTRUSTED_BINARY_CONTENT" | base64 --decode > "${{ env.UNTRUSTED_BINARY_NAME }}"
-          DIGEST=$(sha256sum "${{ env.UNTRUSTED_BINARY_NAME }}" | awk '{print $1}')
+          echo "the binary name to upload is $UNTRUSTED_BINARY_NAME"
+          echo -n "$UNTRUSTED_BINARY_CONTENT" | base64 --decode > "$UNTRUSTED_BINARY_NAME"
+          echo DIGEST=$(sha256sum "$UNTRUSTED_BINARY_NAME" | awk '{print $1}')
+          DIGEST=$(sha256sum "$UNTRUSTED_BINARY_NAME" | awk '{print $1}')
+          ls -lh
           echo "::set-output name=go-binary-sha256::$DIGEST"
 
       #TODO(upload): verify how the action handles malicious names.
       - name: Upload the artifact
         uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 # v2.3.1
         with:
-          name: "${{ env.UNTRUSTED_BINARY_NAME }}"
-          path: "${{ env.UNTRUSTED_BINARY_NAME }}"
+          name: "$UNTRUSTED_BINARY_NAME"
+          path: "$UNTRUSTED_BINARY_NAME"
           if-no-files-found: error
           retention-days: 5
 
@@ -314,7 +316,8 @@ jobs:
         run: |
           set -euo pipefail
       
-          echo "hash of provenance generator should be $PROV_HASH"
+          echo "hash of provenance generator $PROVENANCE_BINARY should be $PROV_HASH"
+
           PROV_HASH=$(sha256sum "$PROVENANCE_BINARY" | awk '{print $1}')
           echo "provenance generator hash computed is $PROV_HASH"
 
@@ -335,6 +338,8 @@ jobs:
           GITHUB_CONTEXT: "${{ toJSON(github) }}"
         run: |
           set -euo pipefail
+
+          echo "provenance generator is $PROVENANCE_BINARY"
 
           # Create provenance
           DIGEST="$UNTRUSTED_BINARY_HASH" ./"$PROVENANCE_BINARY" > "$UNTRUSTED_BINARY_NAME.intoto"
