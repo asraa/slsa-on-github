@@ -101,6 +101,8 @@ func (b *GoBuild) Run(dry bool) error {
 		return nil
 	}
 
+	fmt.Println("binary", binary)
+	fmt.Println("flags", flags)
 	return syscall.Exec(b.goc, flags, envs)
 }
 
