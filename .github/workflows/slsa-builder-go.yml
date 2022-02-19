@@ -6,7 +6,7 @@ permissions:
 env:
   #TODO: let caller upload ?
   REGISTRY: ghcr.io
-  GENERATED_BINARY: compiled-binary
+  GENERATED_BINARY_NAME: compiled-binary
   BUILDER_BINARY: builder
   PROVENANCE_BINARY: provenance
   BUILDER_REPOSITORY: laurentsimon/slsa-on-github
@@ -180,7 +180,7 @@ jobs:
           # Note: this outputs information about resolved arguments, etc.
           # the values are trusted because the compiler is not invoked.
           echo ./"$BUILDER_BINARY" ./releaser.yml "$UNTRUSTED_ENVS" --dry
-          export OUTPUT_BINARY="$GENERATED_BINARY"
+          export OUTPUT_BINARY="$GENERATED_BINARY_NAME"
           ./"$BUILDER_BINARY" ./releaser.yml "$UNTRUSTED_ENVS" --dry
 
   # TODO: add comment and warning: this part should only output
@@ -251,7 +251,7 @@ jobs:
           # TODO: pass UNTRUSTED_WORKING_DIR to builder, which will use realpath()
           # to compute the actual directory.
           echo "./$BUILDER_BINARY" ./releaser.yml "$UNTRUSTED_ENVS"
-          export OUTPUT_BINARY="${{ env.GENERATED_BINARY }}"
+          export OUTPUT_BINARY="${{ env.GENERATED_BINARY_NAME }}"
           ./"$BUILDER_BINARY" ./releaser.yml "$UNTRUSTED_ENVS"
           pwd
           ls -l
@@ -265,11 +265,11 @@ jobs:
           set -euo pipefail
           pwd
           ls -l
-          BASE64_CONTENT=$(cat "${{ env.GENERATED_BINARY }}" | base64) 
+          BASE64_CONTENT=$(cat "${{ env.GENERATED_BINARY_NAME }}" | base64) 
           echo "::set-output name=go-binary-base64::$BASE64_CONTENT"
 
-          echo DIGEST=$(sha256sum "${{ env.GENERATED_BINARY }}" | awk '{print $1}')
-          echo "digest of ${{ env.GENERATED_BINARY }} is $DIGEST"
+          DIGEST=$(sha256sum "${{ env.GENERATED_BINARY_NAME }}" | awk '{print $1}')
+          echo "digest of ${{ env.GENERATED_BINARY_NAME }} is $DIGEST"
   
   build-sha256:
     outputs:
