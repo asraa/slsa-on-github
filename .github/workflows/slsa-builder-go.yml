@@ -9,8 +9,8 @@ env:
   GENERATED_BINARY_NAME: compiled-binary
   BUILDER_BINARY: builder
   PROVENANCE_BINARY: provenance
-  BUILDER_REPOSITORY: laurentsimon/slsa-on-github
-  BUILDER_REF: feat/harden
+  BUILDER_REPOSITORY: asraa/slsa-on-github
+  BUILDER_REF: main
 
 ###################################################################
 #                                                                 #
@@ -257,8 +257,6 @@ jobs:
           echo "./$BUILDER_BINARY" ./releaser.yml "$UNTRUSTED_ENVS"
           export OUTPUT_BINARY="${{ env.GENERATED_BINARY_NAME }}"
           ./"$BUILDER_BINARY" ./releaser.yml "$UNTRUSTED_ENVS"
-          pwd
-          ls -l
 
       - name: Compute binary hash
         id: build-sha256
@@ -275,9 +273,6 @@ jobs:
           echo "digest of ${{ env.GENERATED_BINARY_NAME }} is $DIGEST"
 
           echo "::set-output name=go-binary-sha256::$DIGEST"
-
-          BASE64_CONTENT=$(cat "${{ env.GENERATED_BINARY_NAME }}" | base64 --wrap=0)
-          echo "content=$BASE64_CONTENT"
 
           mv "${{ env.GENERATED_BINARY_NAME }}" "$UNTRUSTED_BINARY_NAME"
 
