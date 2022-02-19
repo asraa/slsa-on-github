@@ -271,13 +271,13 @@ jobs:
       go-binary-sha256: ${{ steps.sha256-gen.outputs.go-binary-sha256 }}
     runs-on: ubuntu-latest
     needs: [build, build-dry]
-    env:
-      UNTRUSTED_BINARY_CONTENT: "${{ needs.build.outputs.go-binary-base64 }}"
-      UNTRUSTED_BINARY_NAME: "${{ needs.build-dry.outputs.go-binary-name }}"
     steps:
       - name: Hash of project binary
         id: sha256-gen
         shell: bash
+        env:
+          UNTRUSTED_BINARY_CONTENT: "${{ needs.build.outputs.go-binary-base64 }}"
+          UNTRUSTED_BINARY_NAME: "${{ needs.build-dry.outputs.go-binary-name }}"
         run: |
           set -euo pipefail
 
@@ -292,8 +292,8 @@ jobs:
       - name: Upload the artifact
         uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 # v2.3.1
         with:
-          name: "$UNTRUSTED_BINARY_NAME"
-          path: "$UNTRUSTED_BINARY_NAME"
+          name: "${{ needs.build-dry.outputs.go-binary-name }}"
+          path: "${{ needs.build-dry.outputs.go-binary-name }}"
           if-no-files-found: error
           retention-days: 5
 
