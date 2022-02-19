@@ -249,6 +249,9 @@ jobs:
         run: |
           set -euo pipefail
 
+          # Disable set-output command.
+          echo "::stop-commands::`echo -n ${{ github.token }} | sha256sum | head -c 64`"
+
           # TODO: pass UNTRUSTED_WORKING_DIR to builder, which will use realpath()
           # to compute the actual directory.
           echo "./$BUILDER_BINARY" ./releaser.yml "$UNTRUSTED_ENVS"
@@ -257,7 +260,7 @@ jobs:
           pwd
           ls -l
 
-      - name: Build project
+      - name: Compute binary hash
         id: build-sha256
         shell: bash
         env:
@@ -265,6 +268,9 @@ jobs:
         run: |
           set -euo pipefail
           # Warning: this is best effort.
+          # Re-enable set-output command.
+          echo "::`echo -n ${{ github.token }} | sha256sum | head -c 64`::"
+
           DIGEST=$(sha256sum "${{ env.GENERATED_BINARY_NAME }}" | awk '{print $1}')
           echo "digest of ${{ env.GENERATED_BINARY_NAME }} is $DIGEST"
 
@@ -274,12 +280,10 @@ jobs:
 
       #TODO(upload): verify how the action handles malicious names.
       - name: Upload the artifact
-        env:
-          UNTRUSTED_BINARY_NAME: "${{ needs.build-dry.outputs.go-binary-name }}"
         uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 # v2.3.1
         with:
-          name: "$UNTRUSTED_BINARY_NAME"
-          path: "$UNTRUSTED_BINARY_NAME"
+          name: "${{ needs.build-dry.outputs.go-binary-name }}"
+          path: "${{ needs.build-dry.outputs.go-binary-name }}"
           if-no-files-found: error
           retention-days: 5
 
