@@ -190,7 +190,7 @@ jobs:
     outputs:
       go-binary-sha256: ${{ steps.build-sha256.outputs.go-binary-sha256 }}
     runs-on: ubuntu-latest
-    needs: builder
+    needs: [builder, build-dry]
     steps:
       - name: Checkout the repository
         uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 # v2.3.4
