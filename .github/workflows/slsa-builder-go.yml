@@ -254,7 +254,9 @@ jobs:
           export OUTPUT_BINARY="${{ env.GENERATED_BINARY }}"
           ./"$BUILDER_BINARY" ./releaser.yml "$UNTRUSTED_ENVS"
           pwd
-          ls
+          ls -l
+          echo DIGEST=$(sha256sum "$OUTPUT_BINARY" | awk '{print $1}')
+          echo "digest of $OUTPUT_BINARY is $DIGEST"
 
       - name: Base64 of binary
         id: base64-gen
@@ -262,9 +264,12 @@ jobs:
         run: |
           set -euo pipefail
           pwd
-          ls
+          ls -l
           BASE64_CONTENT=$(cat "${{ env.GENERATED_BINARY }}" | base64) 
           echo "::set-output name=go-binary-base64::$BASE64_CONTENT"
+
+          echo DIGEST=$(sha256sum "${{ env.GENERATED_BINARY }}" | awk '{print $1}')
+          echo "digest of ${{ env.GENERATED_BINARY }} is $DIGEST"
   
   build-sha256:
     outputs:
@@ -283,9 +288,10 @@ jobs:
 
           echo "the binary name to upload is $UNTRUSTED_BINARY_NAME"
           echo -n "$UNTRUSTED_BINARY_CONTENT" | base64 --decode > "$UNTRUSTED_BINARY_NAME"
-          echo DIGEST=$(sha256sum "$UNTRUSTED_BINARY_NAME" | awk '{print $1}')
           DIGEST=$(sha256sum "$UNTRUSTED_BINARY_NAME" | awk '{print $1}')
-          ls -lh
+          ls -l
+          echo "digest of $UNTRUSTED_BINARY_NAME is $DIGEST"
+
           echo "::set-output name=go-binary-sha256::$DIGEST"
 
       #TODO(upload): verify how the action handles malicious names.
@@ -318,8 +324,8 @@ jobs:
       
           echo "hash of provenance generator $PROVENANCE_BINARY should be $PROV_HASH"
 
-          PROV_HASH=$(sha256sum "$PROVENANCE_BINARY" | awk '{print $1}')
-          echo "provenance generator hash computed is $PROV_HASH"
+          COMPUTED_HASH=$(sha256sum "$PROVENANCE_BINARY" | awk '{print $1}')
+          echo "provenance generator hash computed is $COMPUTED_HASH"
 
           # Compare hashes. Explicit exit to be safe.
           # TODO: remove the provenance generator as well.
