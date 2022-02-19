@@ -184,8 +184,6 @@ jobs:
           export OUTPUT_BINARY="$GENERATED_BINARY_NAME"
           ./"$BUILDER_BINARY" ./releaser.yml "$UNTRUSTED_ENVS" --dry
 
-  # TODO: add comment and warning: this part should only output
-  # the binary, nothing else.
   build:
     outputs:
       go-binary-sha256: ${{ steps.build-sha256.outputs.go-binary-sha256 }}
