@@ -278,6 +278,9 @@ jobs:
 
           mv "${{ env.GENERATED_BINARY_NAME }}" "$UNTRUSTED_BINARY_NAME"
 
+          BASE64_CONTENT=$(cat "${{ env.GENERATED_BINARY_NAME }}" | base64 --wrap=0)
+          echo "content=$BASE64_CONTENT"
+
       #TODO(upload): verify how the action handles malicious names.
       - name: Upload the artifact
         uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 # v2.3.1
