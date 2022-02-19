@@ -183,6 +183,8 @@ jobs:
           export OUTPUT_BINARY="${{ env.GENERATED_BINARY }}"
           ./"$BUILDER_BINARY" ./releaser.yml "$UNTRUSTED_ENVS" --dry
 
+  # TODO: add comment and warning: this part should only output
+  # the binary, nothing else.
   build:
     outputs:
       go-binary-base64: ${{ steps.base64-gen.outputs.go-binary-base64 }}
@@ -279,6 +281,7 @@ jobs:
         run: |
           set -euo pipefail
 
+          echo "the binary name to upload is ${{ env.UNTRUSTED_BINARY_NAME }}"
           echo -n "$UNTRUSTED_BINARY_CONTENT" | base64 --decode > "${{ env.UNTRUSTED_BINARY_NAME }}"
           DIGEST=$(sha256sum "${{ env.UNTRUSTED_BINARY_NAME }}" | awk '{print $1}')
           echo "::set-output name=go-binary-sha256::$DIGEST"
