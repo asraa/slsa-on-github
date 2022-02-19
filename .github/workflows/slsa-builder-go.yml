@@ -89,6 +89,7 @@ jobs:
             BUILDER_DIGEST=$(sha256sum "$BUILDER_BINARY" | awk '{print $1}')
             echo "::set-output name=go-builder-sha256::$BUILDER_DIGEST"
             echo "hash of $BUILDER_BINARY is $BUILDER_DIGEST"
+
             cd -
             cd slsa-provenance
             go build -mod=vendor -o "$PROVENANCE_BINARY"
@@ -305,7 +306,7 @@ jobs:
 
   provenance:
     runs-on: ubuntu-latest
-    needs: [build, build-sha256]
+    needs: [builder, build, build-sha256]
     permissions:
       id-token: write # Needed for keyless.
       contents: read
