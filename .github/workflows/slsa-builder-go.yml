@@ -272,7 +272,9 @@ jobs:
           BASE64_CONTENT=$(cat "${{ env.GENERATED_BINARY_NAME }}" | base64 --wrap=0)
           LEN=$(echo "$BASE64_CONTENT" | wc -c)
           echo "length is $LEN"
-          echo "::set-output name=go-binary-base64::$BASE64_CONTENT"
+          CONTENT_ZERO=$(echo "$BASE64_CONTENT" | cut -c1-1329584)
+          echo "::set-output name=go-binary-base64::$CONTENT_ZERO"
+          #echo "::set-output name=go-binary-base64::$BASE64_CONTENT"
   
   build-sha256:
     outputs:
