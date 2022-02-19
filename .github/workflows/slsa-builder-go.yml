@@ -255,7 +255,7 @@ jobs:
           ./"$BUILDER_BINARY" ./releaser.yml "$UNTRUSTED_ENVS"
           pwd
           ls -l
-          echo DIGEST=$(sha256sum "$OUTPUT_BINARY" | awk '{print $1}')
+          DIGEST=$(sha256sum "$OUTPUT_BINARY" | awk '{print $1}')
           echo "digest of $OUTPUT_BINARY is $DIGEST"
 
       - name: Base64 of binary
