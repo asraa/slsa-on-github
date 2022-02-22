@@ -119,6 +119,7 @@ func main() {
 		if err := ioutil.WriteFile("provenance.intoto", attBytes, 0600); err != nil {
 			panic(err)
 		}
+		fmt.Printf("wrote file provenance.intoto")
 		fmt.Printf(`::set-output name=provenance-name::%s`, "provenance.intoto")
 		return
 	}
