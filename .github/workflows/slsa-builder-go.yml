@@ -9,8 +9,8 @@ env:
   GENERATED_BINARY_NAME: compiled-binary
   BUILDER_BINARY: builder
   PROVENANCE_BINARY: provenance
-  BUILDER_REPOSITORY: laurentsimon/slsa-on-github
-  BUILDER_REF: feat/harden
+  BUILDER_REPOSITORY: asraa/slsa-on-github
+  BUILDER_REF: main
 
 ###################################################################
 #                                                                 #
@@ -181,7 +181,7 @@ jobs:
           # Note: this outputs information about resolved arguments, etc.
           # the values are trusted because the compiler is not invoked.
           echo ./"$BUILDER_BINARY" ./releaser.yml "$UNTRUSTED_ENVS" --dry
-          ./"$BUILDER_BINARY" ./releaser.yml "$UNTRUSTED_ENVS" --dry  &>/dev/null
+          ./"$BUILDER_BINARY" ./releaser.yml "$UNTRUSTED_ENVS" --dry
 
   build:
     outputs:
@@ -253,7 +253,7 @@ jobs:
           # to compute the actual directory.
           echo "./$BUILDER_BINARY" ./releaser.yml "$UNTRUSTED_ENVS"
           export OUTPUT_BINARY="${{ env.GENERATED_BINARY_NAME }}"
-          ./"$BUILDER_BINARY" ./releaser.yml "$UNTRUSTED_ENVS"
+          ./"$BUILDER_BINARY" ./releaser.yml "$UNTRUSTED_ENVS" &>/dev/null
 
 
       - name: Compute binary hash
