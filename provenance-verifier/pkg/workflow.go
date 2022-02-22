@@ -12,7 +12,13 @@ var (
 	errorInvalidGitHubWorkflow = errors.New("invalid GitHub workflow")
 	errorDeclaredEnv           = errors.New("env variables are declared")
 	errorDeclaredDefaults      = errors.New("defaults are declared")
+	errorSelfHostedRunner      = errors.New("self-hosted runner not supported")
 )
+
+// https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#choosing-github-hosted-runners.
+var allowedRunners = map[string]bool{
+	"ubuntu-latest": true, "ubuntu-20.04": true, "ubuntu-18.04": true,
+}
 
 type Workflow struct {
 	workflow *actionlint.Workflow
@@ -56,6 +62,39 @@ func (w *Workflow) validateJobLevelEnv(job *actionlint.Job) error {
 func validateEnv(env *actionlint.Env, msg string) error {
 	if env != nil && len(env.Vars) > 0 {
 		return fmt.Errorf("%s: %w", msg, errorDeclaredEnv)
+	}
+	return nil
+}
+
+// =============== Runners ================ //
+func (w *Workflow) validateRunner() error {
+	for _, job := range w.workflow.Jobs {
+		if job == nil {
+			continue
+		}
+
+		if err := validateRunner(job.RunsOn, allowedRunners); err != nil {
+			return fmt.Errorf("%s: %w", fmt.Sprintf("job %s", getJobIdentity(job)), err)
+		}
+	}
+
+	return nil
+}
+
+func validateRunner(runner *actionlint.Runner, allowed map[string]bool) error {
+	if runner == nil {
+		return nil
+	}
+
+	for _, label := range runner.Labels {
+		if label == nil {
+			continue
+		}
+
+		if _, exists := allowed[label.Value]; !exists {
+			return fmt.Errorf("%s: %w", label.Value, errorSelfHostedRunner)
+		}
+
 	}
 	return nil
 }

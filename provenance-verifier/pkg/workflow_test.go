@@ -195,3 +195,59 @@ func TestTopLevelDefaults(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateRunner(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		path     string
+		expected error
+	}{
+		{
+			name:     "no runner defined",
+			path:     "./testdata/workflow-no-runner.yml",
+			expected: nil,
+		},
+		{
+			name:     "runners defined GH-hosted",
+			path:     "./testdata/workflow-gh-hosted-runners.yml",
+			expected: nil,
+		},
+		{
+			name:     "runner self-hosted first",
+			path:     "./testdata/workflow-first-self-hosted-runners.yml",
+			expected: errorSelfHostedRunner,
+		},
+		{
+			name:     "runner self-hosted second",
+			path:     "./testdata/workflow-second-self-hosted-runners.yml",
+			expected: errorSelfHostedRunner,
+		},
+		{
+			name:     "runner self-hosted third",
+			path:     "./testdata/workflow-third-self-hosted-runners.yml",
+			expected: errorSelfHostedRunner,
+		},
+	}
+	for _, tt := range tests {
+		tt := tt // Re-initializing variable so it is not changed while executing the closure below
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			content, err := os.ReadFile(tt.path)
+			if err != nil {
+				panic(fmt.Errorf("os.ReadFile: %w", err))
+			}
+			workflow, err := WorkflowFromBytes(content)
+			if err != nil {
+				panic(fmt.Errorf("WorkflowFromBytes: %w", err))
+			}
+
+			err = workflow.validateRunner()
+			if !errCmp(err, tt.expected) {
+				t.Errorf(cmp.Diff(err, tt.expected))
+			}
+		})
+	}
+}
