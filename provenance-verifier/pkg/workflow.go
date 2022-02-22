@@ -10,7 +10,7 @@ import (
 
 var (
 	errorInvalidGitHubWorkflow = errors.New("invalid GitHub workflow")
-	errorTopLevelEnvVariables  = errors.New("top level env variables are declared")
+	errorDeclaredEnv           = errors.New("env variables are declared")
 )
 
 type Workflow struct {
@@ -27,9 +27,27 @@ func WorkflowFromBytes(content []byte) (*Workflow, error) {
 	return &self, nil
 }
 
-func (w *Workflow) validateTopLevelEnvironmentVariables() error {
-	if w.workflow.Env != nil && len(w.workflow.Env.Vars) > 0 {
-		return fmt.Errorf("%w", errorTopLevelEnvVariables)
+func (w *Workflow) validateTopLevelEnv() error {
+	return validateEnv(w.workflow.Env, "top level")
+}
+
+func (w *Workflow) validateJobLevelEnv(job *actionlint.Job) error {
+	var n string
+	switch {
+	case job.Name != nil:
+		n = job.Name.Value
+	case job.ID != nil:
+		n = job.ID.Value
+	default:
+		n = "unknown-job"
+	}
+
+	return validateEnv(job.Env, fmt.Sprintf("job %s", n))
+}
+
+func validateEnv(env *actionlint.Env, msg string) error {
+	if env != nil && len(env.Vars) > 0 {
+		return fmt.Errorf("%s: %w", msg, errorDeclaredEnv)
 	}
 	return nil
 }

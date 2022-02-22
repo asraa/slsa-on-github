@@ -26,6 +26,9 @@ jobs:
           
           cd "$BUILDER_DIR"
           go mod vendor
+          # Build
+          go build -mod=vendor
+          # Tests
           go test -mod=vendor -v ./...
           cd -
           
@@ -37,6 +40,7 @@ jobs:
           
           cd "$PROVENANCE_GENERATOR_DIR"
           go mod vendor
+          # Build
           go build -mod=vendor
           cd -
           
@@ -48,5 +52,8 @@ jobs:
           
           cd "$PROVENANCE_VERIFIER_DIR"
           go mod vendor
+          # Build
+          go build -mod=vendor
+          # Tests
           go test -mod=vendor -v ./...
           cd -
