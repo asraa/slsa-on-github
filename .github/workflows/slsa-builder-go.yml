@@ -270,6 +270,9 @@ jobs:
 
           echo "::set-output name=go-binary-sha256::$DIGEST"
 
+          # Create unsigned provenance
+          DIGEST="$DIGEST" ./"$PROVENANCE_BINARY"
+
       - name: Upload the artifact
         uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 # v2.3.1
         with:
@@ -357,11 +360,10 @@ jobs:
           echo "provenance generator is $PROVENANCE_BINARY"
 
           # Create provenance
-          DIGEST="$UNTRUSTED_BINARY_HASH" ./"$PROVENANCE_BINARY" > "$UNTRUSTED_BINARY_NAME.intoto"
+          DIGEST="$UNTRUSTED_BINARY_HASH" ./"$PROVENANCE_BINARY"
 
           # Sign provenance
-          UNSIGNED_PROVENANCE="$UNTRUSTED_BINARY_NAME.intoto" ./"$PROVENANCE_BINARY" > "$UNTRUSTED_BINARY_NAME.signed.intoto"
-          echo "::set-output name=signed-provenance-name::$UNTRUSTED_BINARY_NAME.signed.intoto"
+          UNSIGNED_PROVENANCE="$UNTRUSTED_BINARY_NAME.intoto" ./"$PROVENANCE_BINARY"
 
       - name: Upload the provenance
         uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 # v2.3.1

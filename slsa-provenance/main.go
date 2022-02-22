@@ -116,12 +116,13 @@ func main() {
 			panic(err)
 		}
 
-		fmt.Printf(string(attBytes))
-		fmt.Printf(`::set-output name=provenance::%s`, string(attBytes))
+		if err := ioutil.WriteFile("provenance.intoto", attBytes, 0600); err != nil {
+			panic(err)
+		}
+		fmt.Printf(`::set-output name=provenance-name::%s`, "provenance.intoto")
 		return
 	}
 
-	fmt.Printf(provenance)
 	attBytes, err := ioutil.ReadFile(provenance)
 	if err != nil {
 		attBytes = []byte(provenance)
@@ -146,6 +147,8 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	fmt.Printf(string(k.Cert))
+
 	wrappedSigner := dsse.WrapSigner(k, intoto.PayloadType)
 
 	signedAtt, err := wrappedSigner.SignMessage(bytes.NewReader(attBytes))
@@ -163,5 +166,8 @@ func main() {
 		panic(err)
 	}
 
-	fmt.Printf(string(payload))
+	if err := ioutil.WriteFile("provenance.signed.intoto", payload, 0600); err != nil {
+		panic(err)
+	}
+	fmt.Printf(`::set-output name=signed-provenance-name::%s`, "provenance.signed.intoto")
 }
