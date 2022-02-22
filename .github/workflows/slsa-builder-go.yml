@@ -181,7 +181,6 @@ jobs:
           # Note: this outputs information about resolved arguments, etc.
           # the values are trusted because the compiler is not invoked.
           echo ./"$BUILDER_BINARY" ./releaser.yml "$UNTRUSTED_ENVS" --dry
-          export OUTPUT_BINARY="$GENERATED_BINARY_NAME"
           ./"$BUILDER_BINARY" ./releaser.yml "$UNTRUSTED_ENVS" --dry
 
   build:

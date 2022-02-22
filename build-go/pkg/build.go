@@ -54,13 +54,6 @@ func GoBuildNew(goc string, cfg *GoReleaserConfig) *GoBuild {
 }
 
 func (b *GoBuild) Run(dry bool) error {
-	// Use the name provider via env variable for the compilation.
-	// This variable is trusted and defined by the re-usable workflow.
-	binary := os.Getenv("OUTPUT_BINARY")
-	if binary == "" {
-		return fmt.Errorf("OUTPUT_BINARY not defined")
-	}
-
 	// Set flags.
 	flags, err := b.generateFlags()
 	if err != nil {
@@ -90,8 +83,6 @@ func (b *GoBuild) Run(dry bool) error {
 		return err
 	}
 
-	flags = append(flags, []string{"-o", binary}...)
-
 	// A dry run prints the information that is trusted, before
 	// the compiler is invoked.
 	if dry {
@@ -101,6 +92,15 @@ func (b *GoBuild) Run(dry bool) error {
 		fmt.Printf("TODO:set-output name=go-arguments: %s\n", flags)
 		return nil
 	}
+
+	// Use the name provider via env variable for the compilation.
+	// This variable is trusted and defined by the re-usable workflow.
+	binary := os.Getenv("OUTPUT_BINARY")
+	if binary == "" {
+		return fmt.Errorf("OUTPUT_BINARY not defined")
+	}
+
+	flags = append(flags, []string{"-o", binary}...)
 
 	fmt.Println("binary", binary)
 	fmt.Println("flags", flags)
