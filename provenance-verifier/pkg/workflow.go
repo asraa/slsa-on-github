@@ -13,6 +13,7 @@ var (
 	errorDeclaredEnv           = errors.New("env variables are declared")
 	errorDeclaredDefaults      = errors.New("defaults are declared")
 	errorSelfHostedRunner      = errors.New("self-hosted runner not supported")
+	errorDeclaredStep          = errors.New("steps are declared")
 )
 
 // https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#choosing-github-hosted-runners.
@@ -102,6 +103,18 @@ func validateJobRunner(runner *actionlint.Runner, allowed map[string]bool) error
 			return fmt.Errorf("%s: %w", label.Value, errorSelfHostedRunner)
 		}
 
+	}
+	return nil
+}
+
+// =============== Steps ================ //
+func (w *Workflow) validateJobSteps(job *actionlint.Job) error {
+	for _, step := range job.Steps {
+		if step == nil {
+			continue
+		}
+
+		return fmt.Errorf("%s: %w", fmt.Sprintf("job %s", getJobIdentity(job)), errorDeclaredStep)
 	}
 	return nil
 }
