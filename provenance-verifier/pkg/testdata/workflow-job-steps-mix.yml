@@ -1,0 +1,88 @@
+name: Test SLSA
+on:
+  workflow_dispatch:
+
+permissions: read-all
+
+# env:
+#   ENV_TEST: "some tests env variable"
+      
+jobs:
+  args:
+    runs-on: ubuntu-latest
+    env:
+      ARGS: args value
+    outputs:
+      ldflags: ${{ steps.ldflags.outputs.value }}
+    steps:
+      - id: ldflags
+        run: |
+          echo "::set-output name=value::-X main.gitVersion=v1.2.3 -X main.gitSomething=somthg"
+  job2:
+    runs-on: ubuntu-latest
+    env:
+      JOB: job2 value
+      JOBX: jbx value
+    outputs:
+      ldflags: ${{ steps.ldflags.outputs.value }}
+    steps:
+      - id: ldflags
+        run: |
+          echo "::set-output name=value::-X main.gitVersion=v1.2.3 -X main.gitSomething=somthg"
+  job3:
+    runs-on: ubuntu-latest
+    env:
+      JOB: bla
+    outputs:
+      ldflags: ${{ steps.ldflags.outputs.value }}
+  job4:
+    runs-on: ubuntu-latest
+    env:
+    outputs:
+      ldflags: ${{ steps.ldflags.outputs.value }}
+    steps:
+      - id: ldflags
+        uses: some/action@v1.2.3
+  build:
+    env:
+    permissions:
+      id-token: write
+      #packages: write
+      contents: read
+    needs: args
+    uses: laurentsimon/slsa-on-github/.github/workflows/slsa-builder-go.yml@feat/buildname
+    with:
+      go-version: 1.17
+      #TODO: make this a json/yaml object object
+      env: "VERSION_LDFLAGS:${{needs.args.outputs.ldflags}}"
+
+  upload:
+    permissions:
+      packages: write
+      contents: read
+    runs-on: ubuntu-latest
+    needs: build
+    env:
+      UPLOAD: upload value
+    steps:
+      - uses: 'actions/download-artifact@v2'
+        with:
+          name: ${{ needs.build.outputs.go-binary-name }}
+      - run: |
+          echo name is ${{ needs.build.outputs.go-binary-name }}
+          chmod a+x ./${{ needs.build.outputs.go-binary-name }}
+          ./${{ needs.build.outputs.go-binary-name }}
+  job5:
+    runs-on: ubuntu-latest
+    env:
+    outputs:
+      ldflags: ${{ steps.ldflags.outputs.value }}
+  job6:
+    runs-on: ubuntu-latest
+    env:
+      OBJ: some value
+    outputs:
+      ldflags: ${{ steps.ldflags.outputs.value }}
+    steps:
+      - id: ldflags
+        uses: some/action@v1.2.3
