@@ -181,7 +181,7 @@ jobs:
           # Note: this outputs information about resolved arguments, etc.
           # the values are trusted because the compiler is not invoked.
           echo ./"$BUILDER_BINARY" ./releaser.yml "$UNTRUSTED_ENVS" --dry
-          ./"$BUILDER_BINARY" ./releaser.yml "$UNTRUSTED_ENVS" --dry
+          ./"$BUILDER_BINARY" ./releaser.yml "$UNTRUSTED_ENVS" --dry  &>/dev/null
 
   build:
     outputs:
