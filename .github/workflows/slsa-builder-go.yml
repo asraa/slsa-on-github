@@ -256,6 +256,9 @@ jobs:
           export OUTPUT_BINARY="${{ env.GENERATED_BINARY_NAME }}"
           ./"$BUILDER_BINARY" ./releaser.yml "$UNTRUSTED_ENVS"
 
+          pwd
+          ls
+
       - name: Compute binary hash
         id: build-sha256
         shell: bash
@@ -264,6 +267,9 @@ jobs:
 
           # Re-enable set-output command.
           echo "::`echo -n ${{ github.token }} | sha256sum | head -c 64`::"
+
+          pwd
+          ls
 
           DIGEST=$(sha256sum "${{ env.GENERATED_BINARY_NAME }}" | awk '{print $1}')
           echo "digest of ${{ env.GENERATED_BINARY_NAME }} is $DIGEST"

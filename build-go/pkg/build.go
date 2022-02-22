@@ -96,6 +96,7 @@ func (b *GoBuild) Run(dry bool) error {
 	// the compiler is invoked.
 	if dry {
 		// Share the resolved name of the binary.
+		fmt.Println("dry build")
 		fmt.Printf("::set-output name=go-binary-name::%s\n", filename)
 		fmt.Printf("TODO:set-output name=go-arguments: %s\n", flags)
 		return nil
