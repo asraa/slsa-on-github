@@ -251,3 +251,78 @@ func TestValidateRunner(t *testing.T) {
 		})
 	}
 }
+
+func TestJobLevelRunner(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		path     string
+		expected map[string]error
+	}{
+		{
+			name: "no runner defined",
+			path: "./testdata/workflow-no-runner.yml",
+			expected: map[string]error{
+				"args": nil, "build": nil, "upload": nil,
+			},
+		},
+		{
+			name: "runners defined GH-hosted",
+			path: "./testdata/workflow-gh-hosted-runners.yml",
+			expected: map[string]error{
+				"args": nil, "build": nil, "upload": nil,
+			},
+		},
+		{
+			name: "runner self-hosted first",
+			path: "./testdata/workflow-first-self-hosted-runners.yml",
+			expected: map[string]error{
+				"args": errorSelfHostedRunner, "build": nil, "upload": nil,
+			},
+		},
+		{
+			name: "runner self-hosted second",
+			path: "./testdata/workflow-second-self-hosted-runners.yml",
+			expected: map[string]error{
+				"args": nil, "build": errorSelfHostedRunner, "upload": nil,
+			},
+		},
+		{
+			name: "runner self-hosted third",
+			path: "./testdata/workflow-third-self-hosted-runners.yml",
+			expected: map[string]error{
+				"args": nil, "build": nil, "upload": errorSelfHostedRunner,
+			},
+		},
+	}
+	for _, tt := range tests {
+		tt := tt // Re-initializing variable so it is not changed while executing the closure below
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			content, err := os.ReadFile(tt.path)
+			if err != nil {
+				panic(fmt.Errorf("os.ReadFile: %w", err))
+			}
+			workflow, err := WorkflowFromBytes(content)
+			if err != nil {
+				panic(fmt.Errorf("WorkflowFromBytes: %w", err))
+			}
+
+			if len(workflow.workflow.Jobs) == 0 {
+				panic(fmt.Errorf("no jobs in the workflow: %s", tt.name))
+			}
+			for name, job := range workflow.workflow.Jobs {
+				val, exists := tt.expected[name]
+				if !exists {
+					panic(fmt.Errorf("%s job does not exist", name))
+				}
+				err = workflow.validateJobRunner(job)
+				if !errCmp(err, val) {
+					t.Errorf(cmp.Diff(err, val))
+				}
+			}
+		})
+	}
+}

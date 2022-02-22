@@ -73,15 +73,22 @@ func (w *Workflow) validateRunner() error {
 			continue
 		}
 
-		if err := validateRunner(job.RunsOn, allowedRunners); err != nil {
-			return fmt.Errorf("%s: %w", fmt.Sprintf("job %s", getJobIdentity(job)), err)
+		if err := w.validateJobRunner(job); err != nil {
+			return err
 		}
 	}
 
 	return nil
 }
 
-func validateRunner(runner *actionlint.Runner, allowed map[string]bool) error {
+func (w *Workflow) validateJobRunner(job *actionlint.Job) error {
+	if err := validateJobRunner(job.RunsOn, allowedRunners); err != nil {
+		return fmt.Errorf("%s: %w", fmt.Sprintf("job %s", getJobIdentity(job)), err)
+	}
+	return nil
+}
+
+func validateJobRunner(runner *actionlint.Runner, allowed map[string]bool) error {
 	if runner == nil {
 		return nil
 	}
