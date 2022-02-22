@@ -387,3 +387,116 @@ func TestJobLevelStep(t *testing.T) {
 		})
 	}
 }
+
+func TestTrustedReusableWorkflow(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		path     string
+		expected map[string]struct {
+			ok  bool
+			err error
+		}
+	}{
+		{
+			name: "no re-usable workflow",
+			path: "./testdata/workflow-no-reusable-workflow.yml",
+			expected: map[string]struct {
+				ok  bool
+				err error
+			}{
+				"args": struct {
+					ok  bool
+					err error
+				}{ok: false, err: nil},
+				"build": struct {
+					ok  bool
+					err error
+				}{ok: false, err: nil},
+				"upload": struct {
+					ok  bool
+					err error
+				}{ok: false, err: nil},
+			},
+		},
+		{
+			name: "re-usable workflow mix",
+			path: "./testdata/workflow-reusable-workflow-mix.yml",
+			expected: map[string]struct {
+				ok  bool
+				err error
+			}{
+				"args": struct {
+					ok  bool
+					err error
+				}{ok: false, err: nil},
+				"job2": struct {
+					ok  bool
+					err error
+				}{ok: false, err: nil},
+				"job3": struct {
+					ok  bool
+					err error
+				}{ok: false, err: nil},
+				"job4": struct {
+					ok  bool
+					err error
+				}{ok: false, err: nil},
+				"build": struct {
+					ok  bool
+					err error
+				}{ok: true, err: nil},
+				"job5": struct {
+					ok  bool
+					err error
+				}{ok: false, err: nil},
+				"job6": struct {
+					ok  bool
+					err error
+				}{ok: false, err: errorInvalidReUsableWorkflow},
+				"job7": struct {
+					ok  bool
+					err error
+				}{ok: false, err: errorInvalidReUsableWorkflow},
+				"upload": struct {
+					ok  bool
+					err error
+				}{ok: false, err: nil},
+			},
+		},
+	}
+	for _, tt := range tests {
+		tt := tt // Re-initializing variable so it is not changed while executing the closure below
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			content, err := os.ReadFile(tt.path)
+			if err != nil {
+				panic(fmt.Errorf("os.ReadFile: %w", err))
+			}
+			workflow, err := WorkflowFromBytes(content)
+			if err != nil {
+				panic(fmt.Errorf("WorkflowFromBytes: %w", err))
+			}
+
+			if len(workflow.workflow.Jobs) == 0 {
+				panic(fmt.Errorf("no jobs in the workflow: %s", tt.name))
+			}
+			for name, job := range workflow.workflow.Jobs {
+				val, exists := tt.expected[name]
+				if !exists {
+					panic(fmt.Errorf("%s job does not exist", name))
+				}
+				ok, err := workflow.IsJobCallingTrustedReusableWorkflow(job)
+				if !errCmp(err, val.err) {
+					t.Errorf(cmp.Diff(err, val))
+				}
+
+				if ok != val.ok {
+					t.Errorf(cmp.Diff(ok, val.ok))
+				}
+			}
+		})
+	}
+}

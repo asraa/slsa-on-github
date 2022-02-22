@@ -9,17 +9,20 @@ import (
 )
 
 var (
-	errorInvalidGitHubWorkflow = errors.New("invalid GitHub workflow")
-	errorDeclaredEnv           = errors.New("env variables are declared")
-	errorDeclaredDefaults      = errors.New("defaults are declared")
-	errorSelfHostedRunner      = errors.New("self-hosted runner not supported")
-	errorDeclaredStep          = errors.New("steps are declared")
+	errorInvalidGitHubWorkflow   = errors.New("invalid GitHub workflow")
+	errorDeclaredEnv             = errors.New("env variables are declared")
+	errorDeclaredDefaults        = errors.New("defaults are declared")
+	errorSelfHostedRunner        = errors.New("self-hosted runner not supported")
+	errorDeclaredStep            = errors.New("steps are declared")
+	errorInvalidReUsableWorkflow = errors.New("invalid re-usable workflow call")
 )
 
 // https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#choosing-github-hosted-runners.
 var allowedRunners = map[string]bool{
 	"ubuntu-latest": true, "ubuntu-20.04": true, "ubuntu-18.04": true,
 }
+
+var trustedReusableWorkflow = "asraa/slsa-on-github/.github/workflows/slsa-builder-go.yml"
 
 type Workflow struct {
 	workflow *actionlint.Workflow
@@ -118,6 +121,23 @@ func (w *Workflow) validateJobSteps(job *actionlint.Job) error {
 	}
 	return nil
 }
+
+// =============== Re-usable workflow ================ //
+func (w *Workflow) IsJobCallingTrustedReusableWorkflow(job *actionlint.Job) (bool, error) {
+	if job == nil || job.WorkflowCall == nil || job.WorkflowCall.Uses == nil {
+		return false, nil
+	}
+
+	values := strings.Split(job.WorkflowCall.Uses.Value, "@")
+	if len(values) != 2 {
+		return false, fmt.Errorf("%s: %s: %w", getJobIdentity(job),
+			job.WorkflowCall.Uses.Value, errorInvalidReUsableWorkflow)
+	}
+	fmt.Println(values)
+	return strings.EqualFold(values[0], trustedReusableWorkflow), nil
+}
+
+// TODO: permissions
 
 // =============== Utility ================ //
 func getJobIdentity(job *actionlint.Job) string {
