@@ -164,7 +164,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	if _, err := cosign.TLogUploadInTotoAttestation(ctx, rekorClient, signedAtt, k.Cert); err != nil {
+	if _, err := cosign.TLogUploadInTotoAttestation(ctx, rekorClient, signedAtt, []byte(string(k.Cert))); err != nil {
 		panic(err)
 	}
 
