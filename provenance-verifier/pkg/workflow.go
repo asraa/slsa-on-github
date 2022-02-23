@@ -130,10 +130,9 @@ func (w *Workflow) IsJobCallingTrustedReusableWorkflow(job *actionlint.Job) (boo
 
 	values := strings.Split(job.WorkflowCall.Uses.Value, "@")
 	if len(values) != 2 {
-		return false, fmt.Errorf("%s: %s: %w", getJobIdentity(job),
+		return false, fmt.Errorf("%s: %s is not pinned: %w", getJobIdentity(job),
 			job.WorkflowCall.Uses.Value, errorInvalidReUsableWorkflow)
 	}
-	fmt.Println(values)
 	return strings.EqualFold(values[0], trustedReusableWorkflow), nil
 }
 
