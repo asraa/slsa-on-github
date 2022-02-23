@@ -150,8 +150,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("%d", len(string(k.Cert)))
-	fmt.Printf("%d", len(string([]byte(string(k.Cert)))))
+	fmt.Printf("%d\n", len(string([]byte(string(k.Cert)))))
 
 	wrappedSigner := dsse.WrapSigner(k, intoto.PayloadType)
 
@@ -169,7 +168,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("log index %d", model.LogIndex)
+	fmt.Printf("log index %d\n", *model.LogIndex)
 
 	envelope := &dsselib.Envelope{}
 	if err = json.Unmarshal(signedAtt, envelope); err != nil {
