@@ -150,8 +150,8 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf(string(k.Cert))
-	fmt.Printf(string([]byte(string(k.Cert))))
+	fmt.Printf("%d", len(string(k.Cert)))
+	fmt.Printf("%d", len(string([]byte(string(k.Cert)))))
 
 	wrappedSigner := dsse.WrapSigner(k, intoto.PayloadType)
 
