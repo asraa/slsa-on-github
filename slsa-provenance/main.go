@@ -165,9 +165,11 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	if _, err := cosign.TLogUploadInTotoAttestation(ctx, rekorClient, signedAtt, []byte(string(k.Cert))); err != nil {
+	model, err := cosign.TLogUploadInTotoAttestation(ctx, rekorClient, signedAtt, []byte(string(k.Cert)))
+	if err != nil {
 		panic(err)
 	}
+	fmt.Printf("log index %d", model.LogIndex)
 
 	envelope := &dsselib.Envelope{}
 	if err = json.Unmarshal(signedAtt, envelope); err != nil {
