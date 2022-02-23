@@ -373,7 +373,7 @@ jobs:
       - name: Upload the signed provenance
         uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 # v2.3.1
         with:
-          name: "${{ steps.sign-prov.outputs.signed-provenance-name }}"
-          path: "${{ steps.sign-prov.outputs.signed-provenance-name }}"
+          name: ${{ steps.sign-prov.outputs.signed-provenance-name }}
+          path: ${{ steps.sign-prov.outputs.signed-provenance-name }}
           if-no-files-found: error
           retention-days: 5
