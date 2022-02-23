@@ -388,81 +388,41 @@ func TestJobLevelStep(t *testing.T) {
 	}
 }
 
+type expectedStruct struct {
+	ok  bool
+	err error
+}
+
 func TestTrustedReusableWorkflow(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
 		name     string
 		path     string
-		expected map[string]struct {
-			ok  bool
-			err error
-		}
+		expected map[string]expectedStruct
 	}{
 		{
 			name: "no re-usable workflow",
 			path: "./testdata/workflow-no-reusable-workflow.yml",
-			expected: map[string]struct {
-				ok  bool
-				err error
-			}{
-				"args": struct {
-					ok  bool
-					err error
-				}{ok: false, err: nil},
-				"build": struct {
-					ok  bool
-					err error
-				}{ok: false, err: nil},
-				"upload": struct {
-					ok  bool
-					err error
-				}{ok: false, err: nil},
+			expected: map[string]expectedStruct{
+				"args":   expectedStruct{ok: false, err: nil},
+				"build":  expectedStruct{ok: false, err: nil},
+				"upload": expectedStruct{ok: false, err: nil},
 			},
 		},
 		{
 			name: "re-usable workflow mix",
 			path: "./testdata/workflow-reusable-workflow-mix.yml",
-			expected: map[string]struct {
-				ok  bool
-				err error
-			}{
-				"args": struct {
-					ok  bool
-					err error
-				}{ok: false, err: nil},
-				"job2": struct {
-					ok  bool
-					err error
-				}{ok: false, err: nil},
-				"job3": struct {
-					ok  bool
-					err error
-				}{ok: false, err: nil},
-				"job4": struct {
-					ok  bool
-					err error
-				}{ok: false, err: nil},
-				"build": struct {
-					ok  bool
-					err error
-				}{ok: true, err: nil},
-				"job5": struct {
-					ok  bool
-					err error
-				}{ok: false, err: nil},
-				"job6": struct {
-					ok  bool
-					err error
-				}{ok: false, err: errorInvalidReUsableWorkflow},
-				"job7": struct {
-					ok  bool
-					err error
-				}{ok: false, err: errorInvalidReUsableWorkflow},
-				"upload": struct {
-					ok  bool
-					err error
-				}{ok: false, err: nil},
+			expected: map[string]expectedStruct{
+				"args":   expectedStruct{ok: false, err: nil},
+				"job2":   expectedStruct{ok: false, err: nil},
+				"job3":   expectedStruct{ok: false, err: nil},
+				"job4":   expectedStruct{ok: false, err: nil},
+				"build":  expectedStruct{ok: true, err: nil},
+				"job5":   expectedStruct{ok: false, err: nil},
+				"job6":   expectedStruct{ok: false, err: errorInvalidReUsableWorkflow},
+				"job7":   expectedStruct{ok: false, err: errorInvalidReUsableWorkflow},
+				"upload": expectedStruct{ok: false, err: nil},
 			},
 		},
 	}
@@ -488,7 +448,7 @@ func TestTrustedReusableWorkflow(t *testing.T) {
 				if !exists {
 					panic(fmt.Errorf("%s job does not exist", name))
 				}
-				ok, err := workflow.IsJobCallingTrustedReusableWorkflow(job)
+				ok, err := workflow.isJobCallingTrustedReusableWorkflow(job)
 				if !errCmp(err, val.err) {
 					t.Errorf(cmp.Diff(err, val))
 				}
@@ -496,6 +456,333 @@ func TestTrustedReusableWorkflow(t *testing.T) {
 				if ok != val.ok {
 					t.Errorf(cmp.Diff(ok, val.ok))
 				}
+			}
+		})
+	}
+}
+
+func TestTopLevelPermissions(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		path     string
+		expected error
+	}{
+		{
+			name:     "no top level permissions defined",
+			path:     "./testdata/workflow-no-top-permissions.yml",
+			expected: errorPermissionsDefaultWrite,
+		},
+		{
+			name:     "top level permissions empty",
+			path:     "./testdata/workflow-top-permissions-empty.yml",
+			expected: nil,
+		},
+		{
+			name:     "top level permissions write-all",
+			path:     "./testdata/workflow-top-permissions-writeall.yml",
+			expected: errorPermissionsNotReadAll,
+		},
+		{
+			name:     "top level permissions set contents:write",
+			path:     "./testdata/workflow-top-permissions-contents-write.yml",
+			expected: errorPermissionWrite,
+		},
+		{
+			name:     "top level permissions set actions:write",
+			path:     "./testdata/workflow-top-permissions-actions-write.yml",
+			expected: errorPermissionWrite,
+		},
+		{
+			name:     "top level permissions set id-token:write",
+			path:     "./testdata/workflow-top-permissions-idtoken-write.yml",
+			expected: errorPermissionWrite,
+		},
+		{
+			name:     "top level permissions set other:write not dangerous",
+			path:     "./testdata/workflow-top-permissions-other-write-no-dangerous.yml",
+			expected: nil,
+		},
+		{
+			name:     "top level permissions set other:write dangerous read",
+			path:     "./testdata/workflow-top-permissions-other-write-dangerous-read.yml",
+			expected: nil,
+		},
+		{
+			name:     "top level permissions set other:write dangerous empty",
+			path:     "./testdata/workflow-top-permissions-other-write-dangerous-empty.yml",
+			expected: nil,
+		},
+		{
+			name:     "top level permissions set other:write dangerous none",
+			path:     "./testdata/workflow-top-permissions-other-write-dangerous-none.yml",
+			expected: nil,
+		},
+		{
+			name:     "top level permissions set other:write dangerous write",
+			path:     "./testdata/workflow-top-permissions-other-write-dangerous-write.yml",
+			expected: errorPermissionWrite,
+		},
+	}
+	for _, tt := range tests {
+		tt := tt // Re-initializing variable so it is not changed while executing the closure below
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			content, err := os.ReadFile(tt.path)
+			if err != nil {
+				panic(fmt.Errorf("os.ReadFile: %w", err))
+			}
+			workflow, err := WorkflowFromBytes(content)
+			if err != nil {
+				panic(fmt.Errorf("WorkflowFromBytes: %w", err))
+			}
+
+			if len(workflow.workflow.Jobs) == 0 {
+				panic(fmt.Errorf("no jobs in the workflow: %s", tt.name))
+			}
+
+			err = workflow.validateTopLevelPermissions()
+
+			if !errCmp(err, tt.expected) {
+				t.Errorf(cmp.Diff(err, tt.expected))
+			}
+		})
+	}
+}
+
+func TestJobLevelPermissions(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		path     string
+		expected map[string]error
+	}{
+		{
+			name: "no job permissions",
+			path: "./testdata/workflow-no-job-permissions.yml",
+			expected: map[string]error{
+				"args": nil, "build": nil, "upload": nil,
+			},
+		},
+		{
+			name: "job permission empty",
+			path: "./testdata/workflow-job-permissions-empty.yml",
+			expected: map[string]error{
+				"args": nil, "build": nil, "upload": nil,
+			},
+		},
+		{
+			name: "job permission write-all",
+			path: "./testdata/workflow-job-permissions-writeall.yml",
+			expected: map[string]error{
+				"args":   errorPermissionsNotReadAll,
+				"build":  errorPermissionsNotReadAll,
+				"upload": errorPermissionsNotReadAll,
+			},
+		},
+		{
+			name: "job permission mix write",
+			path: "./testdata/workflow-job-permissions-mix-write.yml",
+			expected: map[string]error{
+				"args":   errorPermissionWrite,
+				"build":  errorPermissionWrite,
+				"upload": errorPermissionWrite,
+			},
+		},
+		{
+			name: "job permission others write no dangerous",
+			path: "./testdata/workflow-job-permissions-others-write-no-dangerous.yml",
+			expected: map[string]error{
+				"args":   nil,
+				"build":  nil,
+				"upload": nil,
+			},
+		},
+		{
+			name: "job permission others write dangerous read",
+			path: "./testdata/workflow-job-permissions-others-write-dangerous-read.yml",
+			expected: map[string]error{
+				"args":   nil,
+				"build":  nil,
+				"upload": nil,
+			},
+		},
+		{
+			name: "job permission others write dangerous none",
+			path: "./testdata/workflow-job-permissions-others-write-dangerous-none.yml",
+			expected: map[string]error{
+				"args":   nil,
+				"build":  nil,
+				"upload": nil,
+			},
+		},
+		{
+			name: "job permission others write dangerous empty",
+			path: "./testdata/workflow-job-permissions-others-write-dangerous-empty.yml",
+			expected: map[string]error{
+				"args":   nil,
+				"build":  nil,
+				"upload": nil,
+			},
+		},
+		{
+			name: "job permission others write dangerous write",
+			path: "./testdata/workflow-job-permissions-others-write-dangerous-write.yml",
+			expected: map[string]error{
+				"args":   errorPermissionWrite,
+				"build":  errorPermissionWrite,
+				"upload": errorPermissionWrite,
+			},
+		},
+	}
+	for _, tt := range tests {
+		tt := tt // Re-initializing variable so it is not changed while executing the closure below
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			content, err := os.ReadFile(tt.path)
+			if err != nil {
+				panic(fmt.Errorf("os.ReadFile: %w", err))
+			}
+			workflow, err := WorkflowFromBytes(content)
+			if err != nil {
+				panic(fmt.Errorf("WorkflowFromBytes: %w", err))
+			}
+
+			if len(workflow.workflow.Jobs) == 0 {
+				panic(fmt.Errorf("no jobs in the workflow: %s", tt.name))
+			}
+			for name, job := range workflow.workflow.Jobs {
+				val, exists := tt.expected[name]
+				if !exists {
+					panic(fmt.Errorf("%s job does not exist", name))
+				}
+				err = workflow.validateUntrustedJobLevelPermissions(job)
+				if !errCmp(err, val) {
+					t.Errorf(cmp.Diff(err, val))
+				}
+			}
+		})
+	}
+}
+
+func TestTrustedBuilderPermissions(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		path     string
+		job      string
+		expected error
+	}{
+		{
+			name:     "correct job permissions",
+			job:      "build",
+			path:     "./testdata/workflow-trusted-job-correct-permissions.yml",
+			expected: nil,
+		},
+		{
+			name:     "job permissions contents write",
+			job:      "build",
+			path:     "./testdata/workflow-trusted-job-contents-write.yml",
+			expected: errorInvalidPermission,
+		},
+		{
+			name:     "job permissions contents empty",
+			job:      "build",
+			path:     "./testdata/workflow-trusted-job-contents-empty.yml",
+			expected: errorInvalidPermission,
+		},
+		{
+			name:     "job permissions contents none",
+			job:      "build",
+			path:     "./testdata/workflow-trusted-job-contents-none.yml",
+			expected: errorInvalidPermission,
+		},
+		{
+			name:     "job permissions id-token read",
+			job:      "build",
+			path:     "./testdata/workflow-trusted-job-idtoken-read.yml",
+			expected: errorInvalidPermission,
+		},
+		{
+			name:     "job permissions id-token empty",
+			job:      "build",
+			path:     "./testdata/workflow-trusted-job-idtoken-empty.yml",
+			expected: errorInvalidPermission,
+		},
+		{
+			name:     "job permissions id-token none",
+			job:      "build",
+			path:     "./testdata/workflow-trusted-job-idtoken-none.yml",
+			expected: errorInvalidPermission,
+		},
+		{
+			name:     "job permissions read-all",
+			job:      "build",
+			path:     "./testdata/workflow-trusted-job-read-all.yml",
+			expected: errorPermissionAllSet,
+		},
+		{
+			name:     "job permissions write-all",
+			job:      "build",
+			path:     "./testdata/workflow-trusted-job-write-all.yml",
+			expected: errorPermissionAllSet,
+		},
+		{
+			name:     "job permissions empty",
+			job:      "build",
+			path:     "./testdata/workflow-trusted-job-empty.yml",
+			expected: errorPermissionAllSet,
+		},
+		{
+			name:     "job permissions additional",
+			job:      "build",
+			path:     "./testdata/workflow-trusted-job-additional.yml",
+			expected: errorPermissionScopeTooMany,
+		},
+		{
+			name:     "job permissions no id-token scope",
+			job:      "build",
+			path:     "./testdata/workflow-trusted-job-no-idtoken-scopes.yml",
+			expected: errorPermissionNotSet,
+		},
+		{
+			name:     "job permissions no contents scope",
+			job:      "build",
+			path:     "./testdata/workflow-trusted-job-no-contents-scopes.yml",
+			expected: errorPermissionNotSet,
+		},
+	}
+	for _, tt := range tests {
+		tt := tt // Re-initializing variable so it is not changed while executing the closure below
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			content, err := os.ReadFile(tt.path)
+			if err != nil {
+				panic(fmt.Errorf("os.ReadFile: %w", err))
+			}
+			workflow, err := WorkflowFromBytes(content)
+			if err != nil {
+				panic(fmt.Errorf("WorkflowFromBytes: %w", err))
+			}
+
+			if len(workflow.workflow.Jobs) == 0 {
+				panic(fmt.Errorf("no jobs in the workflow: %s", tt.name))
+			}
+
+			job, exists := workflow.workflow.Jobs[tt.job]
+			if !exists {
+				panic(fmt.Errorf("job not found in the workflow: %s", tt.job))
+			}
+
+			err = workflow.validateTrustedJobLevelPermissions(job)
+			if !errCmp(err, tt.expected) {
+				t.Errorf(cmp.Diff(err, tt.expected))
 			}
 		})
 	}

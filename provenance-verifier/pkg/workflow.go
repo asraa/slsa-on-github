@@ -15,6 +15,14 @@ var (
 	errorSelfHostedRunner        = errors.New("self-hosted runner not supported")
 	errorDeclaredStep            = errors.New("steps are declared")
 	errorInvalidReUsableWorkflow = errors.New("invalid re-usable workflow call")
+	errorInvalidPermission       = errors.New("invalid permission")
+	errorPermissionsDefaultWrite = errors.New("no permission declared")
+	errorPermissionsNotReadAll   = errors.New("permissions are not set to `read-all`")
+	errorPermissionWrite         = errors.New("permission is set to write")
+	errorInternalPermission      = errors.New("internal error parsing permissions")
+	errorPermissionAllSet        = errors.New("permissions all set")
+	errorPermissionScopeTooMany  = errors.New("too many permissions scopes defined")
+	errorPermissionNotSet        = errors.New("permissions not set")
 )
 
 // https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#choosing-github-hosted-runners.
@@ -23,6 +31,20 @@ var allowedRunners = map[string]bool{
 }
 
 var trustedReusableWorkflow = "asraa/slsa-on-github/.github/workflows/slsa-builder-go.yml"
+
+var (
+	permissionIdToken  = "id-token"
+	permissionContents = "contents"
+	permissionActions  = "actions"
+)
+
+// We allow `packages` to be set to `write` for caller to upload
+// the package to GitHub registry. `contents` is not strictly needed,
+// but we verify it anyway since it violates SLSA4.
+var dangerousPermissions = map[string]bool{
+	permissionContents: true, permissionIdToken: true,
+	permissionActions: true,
+}
 
 type Workflow struct {
 	workflow *actionlint.Workflow
@@ -123,7 +145,7 @@ func (w *Workflow) validateJobSteps(job *actionlint.Job) error {
 }
 
 // =============== Re-usable workflow ================ //
-func (w *Workflow) IsJobCallingTrustedReusableWorkflow(job *actionlint.Job) (bool, error) {
+func (w *Workflow) isJobCallingTrustedReusableWorkflow(job *actionlint.Job) (bool, error) {
 	if job == nil || job.WorkflowCall == nil || job.WorkflowCall.Uses == nil {
 		return false, nil
 	}
@@ -133,11 +155,149 @@ func (w *Workflow) IsJobCallingTrustedReusableWorkflow(job *actionlint.Job) (boo
 		return false, fmt.Errorf("%s: %s: %w", getJobIdentity(job),
 			job.WorkflowCall.Uses.Value, errorInvalidReUsableWorkflow)
 	}
-	fmt.Println(values)
 	return strings.EqualFold(values[0], trustedReusableWorkflow), nil
 }
 
-// TODO: permissions
+// =============== Permissions ================ //
+// https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/about-security-hardening-with-openid-connect.
+func (w *Workflow) validateTopLevelPermissions() error {
+	// No definition means all permissions are set write by default.
+	if w.workflow.Permissions == nil {
+		return fmt.Errorf("%w", errorPermissionsDefaultWrite)
+	}
+
+	return validateUntrustedPermissions(w.workflow.Permissions)
+}
+
+func (w *Workflow) validateUntrustedJobLevelPermissions(job *actionlint.Job) error {
+	if job == nil {
+		return nil
+	}
+
+	// Job permission not set inherit the top-level permissions,
+	// which we validate via validateTopLevelPermissions().
+	if job.Permissions == nil {
+		return nil
+	}
+
+	if err := validateUntrustedPermissions(job.Permissions); err != nil {
+		return fmt.Errorf("%s: %w", getJobIdentity(job), err)
+	}
+
+	return nil
+}
+
+func validateUntrustedPermissions(permissions *actionlint.Permissions) error {
+	if permissions == nil {
+		// Since this is different for top-level and job-level,
+		// we should fail if this happens.
+		return fmt.Errorf("%w", errorInternalPermission)
+	}
+
+	// `nil` value means `none` and is safe.
+	// If it's not `nil`, we verify that permissions are set to `read-all` or `` (none all).
+	if permissions.All != nil &&
+		!strings.EqualFold(permissions.All.Value, "") &&
+		!strings.EqualFold(permissions.All.Value, "read-all") {
+		return fmt.Errorf("%w", errorPermissionsNotReadAll)
+	}
+
+	// Verify individual permissions set.
+	for name, scope := range permissions.Scopes {
+		if scope == nil || scope.Name == nil {
+			return fmt.Errorf("%w: scope is nil", errorInvalidPermission)
+		}
+
+		if scope.Name.Value != name {
+			return fmt.Errorf("%w: '%s' different from '%s'", errorInvalidPermission, scope.Name.Value, name)
+		}
+
+		// `nil` value means `none` and is safe.
+		if scope.Value == nil {
+			return nil
+		}
+
+		// Value of permission is set: verify it `read` or `none`.
+		// We only verify certain permissions that are danegrous, including the
+		// `id-token`, but we accept other permissions.
+		if isDangerousPermission(name) &&
+			!strings.EqualFold(scope.Value.Value, "read") &&
+			!strings.EqualFold(scope.Value.Value, "none") &&
+			!strings.EqualFold(scope.Value.Value, "") {
+			return fmt.Errorf("%s: %w", name, errorPermissionWrite)
+		}
+
+	}
+	return nil
+}
+
+func (w *Workflow) validateTrustedJobLevelPermissions(job *actionlint.Job) error {
+	if job == nil {
+		return fmt.Errorf("%w", errorInternalPermission)
+	}
+
+	// Permissions must be defined.
+	if job.Permissions == nil {
+		return fmt.Errorf("builder: %w", errorPermissionNotSet)
+	}
+
+	// No read-all.
+	if job.Permissions.All != nil {
+		return fmt.Errorf("builder: %w: %s", errorPermissionAllSet, job.Permissions.All.Value)
+	}
+
+	// Scopes defined.
+	if len(job.Permissions.Scopes) != 2 {
+		return fmt.Errorf("builder: %w", errorPermissionScopeTooMany)
+	}
+
+	// Validate the `id-token` permissions is set to `write`.
+	if err := validateTrustedJobPermission(job.Permissions.Scopes, permissionIdToken, "write"); err != nil {
+		return err
+	}
+
+	// Validate the `contents` permissions is set to `read`.
+	// Note: this is only necessary for private repos.
+	if err := validateTrustedJobPermission(job.Permissions.Scopes, permissionContents, "read"); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func validateTrustedJobPermission(scopes map[string]*actionlint.PermissionScope,
+	permissionName, permissionValue string) error {
+	scope, exists := scopes[permissionName]
+	if !exists {
+		return fmt.Errorf("builder: %s: %w", permissionName, errorPermissionNotSet)
+	}
+
+	// Validate name.
+	if scope == nil || scope.Name == nil {
+		return fmt.Errorf("builder: %w: scope is nil", errorInvalidPermission)
+	}
+
+	if scope.Name.Value != permissionName {
+		return fmt.Errorf("builder: %w: '%s' different from '%s'",
+			errorInvalidPermission, scope.Name.Value, permissionName)
+	}
+
+	// Valdate value.
+	if scope.Value == nil {
+		return fmt.Errorf("builder: %s: %w: scope not set", permissionName, errorInvalidPermission)
+	}
+
+	if !strings.EqualFold(scope.Value.Value, permissionValue) {
+		return fmt.Errorf("builder: %w: scope of %s is set to '%s'",
+			errorInvalidPermission, permissionName, scope.Value.Value)
+	}
+	return nil
+}
+
+func isDangerousPermission(name string) bool {
+	_, exists := dangerousPermissions[name]
+	return exists
+}
 
 // =============== Utility ================ //
 func getJobIdentity(job *actionlint.Job) string {
