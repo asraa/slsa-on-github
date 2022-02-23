@@ -212,14 +212,14 @@ func validateUntrustedPermissions(permissions *actionlint.Permissions) error {
 			return fmt.Errorf("%w: '%s' different from '%s'", errorInvalidPermission, scope.Name.Value, name)
 		}
 
-		// `nil` value means `none` and is safe.
 		if scope.Value == nil {
-			return nil
+			continue
 		}
 
-		// Value of permission is set: verify it `read` or `none`.
+		// Value of permission is set: verify it is `read` or `none`.
 		// We only verify certain permissions that are danegrous, including the
 		// `id-token`, but we accept other permissions.
+		// "" value means `none` and is safe.
 		if isDangerousPermission(name) &&
 			!strings.EqualFold(scope.Value.Value, "read") &&
 			!strings.EqualFold(scope.Value.Value, "none") &&

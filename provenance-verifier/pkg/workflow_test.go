@@ -520,6 +520,31 @@ func TestTopLevelPermissions(t *testing.T) {
 			expected: nil,
 		},
 		{
+			name:     "top level permissions set other empty dangerous empty",
+			path:     "./testdata/workflow-top-permissions-other-empty-dangerous-empty.yml",
+			expected: nil,
+		},
+		{
+			name:     "top level permissions set other empty dangerous read",
+			path:     "./testdata/workflow-top-permissions-other-empty-dangerous-read.yml",
+			expected: nil,
+		},
+		{
+			name:     "top level permissions set other empty contents write",
+			path:     "./testdata/workflow-top-permissions-other-empty-contents-write.yml",
+			expected: errorPermissionWrite,
+		},
+		{
+			name:     "top level permissions set other empty id-token write",
+			path:     "./testdata/workflow-top-permissions-other-empty-idtoken-write.yml",
+			expected: errorPermissionWrite,
+		},
+		{
+			name:     "top level permissions set other empty actions write",
+			path:     "./testdata/workflow-top-permissions-other-empty-actions-write.yml",
+			expected: errorPermissionWrite,
+		},
+		{
 			name:     "top level permissions set other:write dangerous write",
 			path:     "./testdata/workflow-top-permissions-other-write-dangerous-write.yml",
 			expected: errorPermissionWrite,
@@ -595,6 +620,33 @@ func TestJobLevelPermissions(t *testing.T) {
 		{
 			name: "job permission others write no dangerous",
 			path: "./testdata/workflow-job-permissions-others-write-no-dangerous.yml",
+			expected: map[string]error{
+				"args":   nil,
+				"build":  nil,
+				"upload": nil,
+			},
+		},
+		{
+			name: "job permission others empty dangerous write",
+			path: "./testdata/workflow-job-permissions-others-empty-dangerous-write.yml",
+			expected: map[string]error{
+				"args":   errorPermissionWrite,
+				"build":  errorPermissionWrite,
+				"upload": errorPermissionWrite,
+			},
+		},
+		{
+			name: "job permission others empty dangerous read",
+			path: "./testdata/workflow-job-permissions-others-empty-dangerous-read.yml",
+			expected: map[string]error{
+				"args":   nil,
+				"build":  nil,
+				"upload": nil,
+			},
+		},
+		{
+			name: "job permission others empty dangerous empty",
+			path: "./testdata/workflow-job-permissions-others-empty-dangerous-empty.yml",
 			expected: map[string]error{
 				"args":   nil,
 				"build":  nil,
