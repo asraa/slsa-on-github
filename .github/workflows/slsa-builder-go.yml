@@ -310,8 +310,13 @@ jobs:
       - name: Upload the generated binary
         uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 # v2.3.1
         with:
+<<<<<<< HEAD
           name: "${{ needs.build-dry.outputs.go-binary-name }}"
           path: "${{ needs.build-dry.outputs.go-binary-name }}"
+=======
+          name: "${{ steps.sha256-gen.outputs.provenance-name }}"
+          path: "${{ steps.sha256-gen.outputs.provenance-name }}"
+>>>>>>> 3c4ab0d (update)
           if-no-files-found: error
           retention-days: 5
 

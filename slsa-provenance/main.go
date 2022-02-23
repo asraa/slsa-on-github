@@ -43,8 +43,9 @@ type GitHubContext struct {
 
 func main() {
 	provenance, ok := os.LookupEnv("UNSIGNED_PROVENANCE")
+	// Generate the provenance
+	// TODO: Refactor with flags library.
 	if !ok {
-		// Generate the provenance
 		digest, ok := os.LookupEnv("DIGEST")
 		if !ok {
 			panic(errors.New("Environment variable DIGEST not present"))
@@ -119,10 +120,11 @@ func main() {
 			panic(err)
 		}
 
-		if err := ioutil.WriteFile("provenance.intoto", attBytes, 0600); err != nil {
+		filename := fmt.Sprintf("%s.intoto", binary)
+		if err := ioutil.WriteFile(filename, attBytes, 0600); err != nil {
 			panic(err)
 		}
-		fmt.Printf(`::set-output name=provenance-name::%s`, "provenance.intoto")
+		fmt.Printf(`::set-output name=provenance-name::%s`, filename)
 		return
 	}
 
@@ -150,8 +152,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("%d\n", len(string([]byte(string(k.Cert)))))
-
 	wrappedSigner := dsse.WrapSigner(k, intoto.PayloadType)
 
 	signedAtt, err := wrappedSigner.SignMessage(bytes.NewReader(attBytes))
@@ -164,11 +164,10 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	model, err := cosign.TLogUploadInTotoAttestation(ctx, rekorClient, signedAtt, []byte(string(k.Cert)))
-	if err != nil {
+	// TODO: Is it a bug that we need []byte(string(k.Cert)) or else we hit invalid PEM?
+	if _, err := cosign.TLogUploadInTotoAttestation(ctx, rekorClient, signedAtt, []byte(string(k.Cert))); err != nil {
 		panic(err)
 	}
-	fmt.Printf("log index %d\n", *model.LogIndex)
 
 	envelope := &dsselib.Envelope{}
 	if err = json.Unmarshal(signedAtt, envelope); err != nil {
@@ -180,8 +179,9 @@ func main() {
 		panic(err)
 	}
 
-	if err := ioutil.WriteFile("provenance.signed.intoto", payload, 0600); err != nil {
+	filename := fmt.Sprintf("%s.sig", provenance)
+	if err := ioutil.WriteFile(filename, payload, 0600); err != nil {
 		panic(err)
 	}
-	fmt.Printf(`::set-output name=signed-provenance-name::%s`, "provenance.signed.intoto")
+	fmt.Printf(`::set-output name=signed-provenance-name::%s`, filename)
 }
