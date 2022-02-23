@@ -212,8 +212,9 @@ func validateUntrustedPermissions(permissions *actionlint.Permissions) error {
 			return fmt.Errorf("%w: '%s' different from '%s'", errorInvalidPermission, scope.Name.Value, name)
 		}
 
+		// Note sure when this may happen, so returning an error to catch it.
 		if scope.Value == nil {
-			continue
+			return fmt.Errorf("%w: %s: scope.Value is nil", errorInternalPermission, name)
 		}
 
 		// Value of permission is set: verify it is `read` or `none`.
