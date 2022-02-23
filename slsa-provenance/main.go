@@ -16,6 +16,8 @@ import (
 	slsa "github.com/in-toto/in-toto-golang/in_toto/slsa_provenance/v0.2"
 	dsselib "github.com/secure-systems-lab/go-securesystemslib/dsse"
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio"
+	"github.com/sigstore/cosign/cmd/cosign/cli/rekor"
+	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/providers"
 	_ "github.com/sigstore/cosign/pkg/providers/all"
 	"github.com/sigstore/sigstore/pkg/signature/dsse"
@@ -25,6 +27,7 @@ const (
 	defaultFulcioAddr   = "https://fulcio.sigstore.dev"
 	defaultOIDCIssuer   = "https://oauth2.sigstore.dev/auth"
 	defaultOIDCClientID = "sigstore"
+	defaultRekorAddr    = "https://rekor.sigstore.dev"
 )
 
 type GitHubContext struct {
@@ -153,6 +156,15 @@ func main() {
 
 	signedAtt, err := wrappedSigner.SignMessage(bytes.NewReader(attBytes))
 	if err != nil {
+		panic(err)
+	}
+
+	// Upload to tlog
+	rekorClient, err := rekor.NewClient(defaultRekorAddr)
+	if err != nil {
+		panic(err)
+	}
+	if _, err := cosign.TLogUploadInTotoAttestation(ctx, rekorClient, signedAtt, attBytes); err != nil {
 		panic(err)
 	}
 
