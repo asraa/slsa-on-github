@@ -1,0 +1,67 @@
+name: Test SLSA
+on:
+  workflow_dispatch:
+
+
+jobs:
+  args:
+    runs-on: ubuntu-latest
+    permissions:
+      checks: 
+      deployments: 
+      discussions: 
+      issues: 
+      metadata: 
+      packages: 
+      pages: 
+      pull-requests: 
+      repository-projects: 
+      security-events: 
+      statuses: 
+      contents: write
+      
+    outputs:
+      ldflags: ${{ steps.ldflags.outputs.value }}
+    steps:
+      - id: ldflags
+        run: |
+          echo "::set-output name=value::-X main.gitVersion=v1.2.3 -X main.gitSomething=somthg"
+
+  build:
+#     env:
+#       VERSION_LDFLAGS: ${{needs.args.outputs.ldflags}}
+    permissions:
+      statuses: 
+      actions: write
+    needs: args
+    uses: asraa/slsa-on-github/.github/workflows/slsa-builder-go.yml@feat/buildname
+    with:
+      go-version: 1.17
+      #TODO: make this a json/yaml object object
+      env: "VERSION_LDFLAGS:${{needs.args.outputs.ldflags}}"
+
+  upload:
+    permissions:
+      checks: 
+      deployments: 
+      discussions: 
+      issues: 
+      metadata: 
+      packages: 
+      pages: 
+      id-token: write
+      pull-requests: 
+      repository-projects: 
+      security-events: 
+      statuses: 
+      
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: 'actions/download-artifact@v2'
+        with:
+          name: ${{ needs.build.outputs.go-binary-name }}
+      - run: |
+          echo name is ${{ needs.build.outputs.go-binary-name }}
+          chmod a+x ./${{ needs.build.outputs.go-binary-name }}
+          ./${{ needs.build.outputs.go-binary-name }}
