@@ -155,6 +155,76 @@ func Test_validateTrustedReusableWorkflowEnv(t *testing.T) {
 	}
 }
 
+func Test_validateJobLevelDefaults(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		path     string
+		expected map[string]error
+	}{
+		{
+			name: "no job default",
+			path: "./testdata/workflow-no-job-defaults.yml",
+			expected: map[string]error{
+				"args": nil, "build": nil, "upload": nil,
+			},
+		},
+		{
+			name: "job default defined",
+			path: "./testdata/workflow-job-defaults.yml",
+			expected: map[string]error{
+				"args":   errorDeclaredDefaults,
+				"build":  errorDeclaredDefaults,
+				"upload": errorDeclaredDefaults,
+			},
+		},
+		{
+			name: "job default mix",
+			path: "./testdata/workflow-job-defaults-mix.yml",
+			expected: map[string]error{
+				"args":   errorDeclaredDefaults,
+				"job2":   errorDeclaredDefaults,
+				"job3":   errorDeclaredDefaults,
+				"job4":   nil,
+				"build":  errorDeclaredDefaults,
+				"upload": errorDeclaredDefaults,
+				"job5":   nil,
+				"job6":   nil,
+			},
+		},
+	}
+	for _, tt := range tests {
+		tt := tt // Re-initializing variable so it is not changed while executing the closure below
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			content, err := os.ReadFile(tt.path)
+			if err != nil {
+				panic(fmt.Errorf("os.ReadFile: %w", err))
+			}
+			workflow, err := WorkflowFromBytes(content)
+			if err != nil {
+				panic(fmt.Errorf("WorkflowFromBytes: %w", err))
+			}
+
+			if len(workflow.workflow.Jobs) == 0 {
+				panic(fmt.Errorf("no jobs in the workflow: %s", tt.name))
+			}
+			for name, job := range workflow.workflow.Jobs {
+				val, exists := tt.expected[name]
+				if !exists {
+					panic(fmt.Errorf("%s job does not exist", name))
+				}
+				err = workflow.validateJobLevelDefaults(job)
+				if !errCmp(err, val) {
+					t.Errorf(cmp.Diff(err, val))
+				}
+			}
+		})
+	}
+}
+
 func Test_validateTopLevelDefaults(t *testing.T) {
 	t.Parallel()
 
@@ -810,12 +880,98 @@ func Test_validateTrustedJobDefinitions(t *testing.T) {
 			path:     "./testdata/workflow-job-steps-mix-trusted.yml",
 			expected: nil,
 		},
-		// TODO: Defaults
-		// TODO:Permissions.
+		// Defaults.
+		// Note: default cannot be declared in a job that calls a re-usable workflow.
+		{
+			name:     "no job default",
+			path:     "./testdata/workflow-no-job-defaults-trusted.yml",
+			expected: nil,
+		},
+		{
+			name:     "job default mix",
+			path:     "./testdata/workflow-job-defaults-mix-trusted.yml",
+			expected: nil,
+		},
+		// Permissions.
 		{
 			name:     "three scopes",
 			path:     "./testdata/workflow-trusted-three-scopes.yml",
 			expected: errorPermissionScopeInvalidNumber,
+		},
+		{
+			name:     "no scopes",
+			path:     "./testdata/workflow-trusted-no-scopes.yml",
+			expected: errorPermissionAllSet,
+		},
+		{
+			name:     "one scope",
+			path:     "./testdata/workflow-trusted-one-scope.yml",
+			expected: errorPermissionScopeInvalidNumber,
+		},
+		{
+			name:     "correct job permissions",
+			path:     "./testdata/workflow-trusted-job-correct-permissions-trusted.yml",
+			expected: nil,
+		},
+		{
+			name:     "job permissions contents write",
+			path:     "./testdata/workflow-trusted-job-contents-write-trusted.yml",
+			expected: errorInvalidPermission,
+		},
+		{
+			name:     "job permissions contents empty",
+			path:     "./testdata/workflow-trusted-job-contents-empty-trusted.yml",
+			expected: errorInvalidPermission,
+		},
+		{
+			name:     "job permissions contents none",
+			path:     "./testdata/workflow-trusted-job-contents-none-trusted.yml",
+			expected: errorInvalidPermission,
+		},
+		{
+			name:     "job permissions id-token read",
+			path:     "./testdata/workflow-trusted-job-idtoken-read-trusted.yml",
+			expected: errorInvalidPermission,
+		},
+		{
+			name:     "job permissions id-token empty",
+			path:     "./testdata/workflow-trusted-job-idtoken-empty-trusted.yml",
+			expected: errorInvalidPermission,
+		},
+		{
+			name:     "job permissions id-token none",
+			path:     "./testdata/workflow-trusted-job-idtoken-none-trusted.yml",
+			expected: errorInvalidPermission,
+		},
+		{
+			name:     "job permissions read-all",
+			path:     "./testdata/workflow-trusted-job-read-all-trusted.yml",
+			expected: errorPermissionAllSet,
+		},
+		{
+			name:     "job permissions write-all",
+			path:     "./testdata/workflow-trusted-job-write-all-trusted.yml",
+			expected: errorPermissionAllSet,
+		},
+		{
+			name:     "job permissions empty",
+			path:     "./testdata/workflow-trusted-job-empty-trusted.yml",
+			expected: errorPermissionAllSet,
+		},
+		{
+			name:     "job permissions additional",
+			path:     "./testdata/workflow-trusted-job-additional-trusted.yml",
+			expected: errorPermissionScopeInvalidNumber,
+		},
+		{
+			name:     "job permissions no id-token scope",
+			path:     "./testdata/workflow-trusted-job-no-idtoken-scopes-trusted.yml",
+			expected: errorPermissionNotSet,
+		},
+		{
+			name:     "job permissions no contents scope",
+			path:     "./testdata/workflow-trusted-job-no-contents-scopes-trusted.yml",
+			expected: errorPermissionNotSet,
 		},
 	}
 	for _, tt := range tests {

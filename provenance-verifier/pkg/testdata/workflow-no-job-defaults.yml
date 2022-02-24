@@ -4,9 +4,6 @@ on:
 
 permissions: read-all
 
-# env:
-#   ENV_TEST: "some tests env variable"
-      
 jobs:
   args:
     env:
@@ -24,7 +21,7 @@ jobs:
       id-token: write
       contents: read
     needs: args
-    uses: asraa/slsa-on-github/.github/workflows/slsa-builder-go.yml@feat/buildname
+    uses: bla/slsa-on-github/.github/workflows/slsa-builder-go.yml@feat/buildname
     with:
       go-version: 1.17
       env: "VERSION_LDFLAGS:${{needs.args.outputs.ldflags}}"

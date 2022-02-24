@@ -2,15 +2,11 @@ name: Test SLSA
 on:
   workflow_dispatch:
 
+
 permissions: read-all
 
-# env:
-#   ENV_TEST: "some tests env variable"
-      
 jobs:
   args:
-    env:
-      NAME: value
     runs-on: ubuntu-latest
     outputs:
       ldflags: ${{ steps.ldflags.outputs.value }}
@@ -20,13 +16,14 @@ jobs:
           echo "::set-output name=value::-X main.gitVersion=v1.2.3 -X main.gitSomething=somthg"
 
   build:
-    permissions:
+    permissions: 
       id-token: write
-      contents: read
+      status: read
     needs: args
     uses: asraa/slsa-on-github/.github/workflows/slsa-builder-go.yml@feat/buildname
     with:
       go-version: 1.17
+      #TODO: make this a json/yaml object object
       env: "VERSION_LDFLAGS:${{needs.args.outputs.ldflags}}"
 
   upload:
