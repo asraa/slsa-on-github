@@ -1,6 +1,5 @@
 # slsa-on-github
-Achieving SLSA 2+ on GitHub
-
+Non falsifiable SLSA provenance using GitHub workflows
 
 Example usage
 ```
