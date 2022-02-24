@@ -21,7 +21,7 @@ var (
 	errorPermissionWrite               = errors.New("permission is set to write")
 	errorInternalPermission            = errors.New("internal error parsing permissions")
 	errorPermissionAllSet              = errors.New("permissions all set")
-	errorPermissionScopeTooMany        = errors.New("too many permissions scopes defined")
+	errorPermissionScopeInvalidNumber  = errors.New("invalid number of permission scopes")
 	errorPermissionNotSet              = errors.New("permissions not set")
 	errorMultipleJobsUseTrustedBuilder = errors.New("trusted builder used in multiple jobs")
 	errorInternalUniqueJob             = errors.New("internal error retrieving trusted job")
@@ -422,7 +422,7 @@ func (w *Workflow) validateTrustedReusableWorkflowPermissions(job *actionlint.Jo
 
 	// Scopes defined.
 	if len(job.Permissions.Scopes) != 2 {
-		return fmt.Errorf("builder: %w", errorPermissionScopeTooMany)
+		return fmt.Errorf("builder: %w", errorPermissionScopeInvalidNumber)
 	}
 
 	// Validate the `id-token` permissions is set to `write`.

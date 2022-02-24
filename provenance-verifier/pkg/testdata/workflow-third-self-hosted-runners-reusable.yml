@@ -4,8 +4,13 @@ on:
 
 permissions: read-all
 
+# env:
+#   ENV_TEST: "some tests env variable"
+      
 jobs:
   args:
+    runs-on: ubuntu-latest
+    env:
     outputs:
       ldflags: ${{ steps.ldflags.outputs.value }}
     steps:
@@ -14,11 +19,13 @@ jobs:
           echo "::set-output name=value::-X main.gitVersion=v1.2.3 -X main.gitSomething=somthg"
 
   build:
+    runs-on: ubuntu-20.04
     permissions:
-      id-token: write
+      #id-token: write
+      #packages: write
       contents: read
     needs: args
-    uses: asraa/slsa-on-github/.github/workflows/slsa-builder-go.yml@feat/buildname
+    uses: some/action@v1
     with:
       go-version: 1.17
       #TODO: make this a json/yaml object object
@@ -28,7 +35,9 @@ jobs:
     permissions:
       packages: write
       contents: read
+    runs-on: some-label
     needs: build
+    env:
     steps:
       - uses: 'actions/download-artifact@v2'
         with:
