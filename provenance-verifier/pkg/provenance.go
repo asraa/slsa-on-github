@@ -1,23 +1,39 @@
 package pkg
 
 import (
+	"bytes"
 	"context"
 	"crypto/x509"
+	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
+	cjson "github.com/docker/go/canonical/json"
+	"github.com/go-openapi/runtime"
 	"github.com/google/go-github/v39/github"
+	"github.com/google/trillian/merkle/logverifier"
+	"github.com/google/trillian/merkle/rfc6962"
 	intoto "github.com/in-toto/in-toto-golang/in_toto"
 	dsselib "github.com/secure-systems-lab/go-securesystemslib/dsse"
+	"github.com/sigstore/sigstore/pkg/signature/dsse"
+
+	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio"
+	"github.com/sigstore/cosign/pkg/cosign"
+	"github.com/sigstore/cosign/pkg/cosign/bundle"
 	sigs "github.com/sigstore/cosign/pkg/signature"
 	"github.com/sigstore/rekor/pkg/generated/client"
+	"github.com/sigstore/rekor/pkg/generated/client/entries"
 	"github.com/sigstore/rekor/pkg/generated/client/index"
 	"github.com/sigstore/rekor/pkg/generated/models"
-	"github.com/spf13/viper"
+	"github.com/sigstore/rekor/pkg/types"
+	intotod "github.com/sigstore/rekor/pkg/types/intoto/v0.0.1"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
 )
 
 const (
@@ -25,6 +41,7 @@ const (
 	defaultOIDCIssuer   = "https://oauth2.sigstore.dev/auth"
 	defaultOIDCClientID = "sigstore"
 	defaultRekorAddr    = "https://rekor.sigstore.dev"
+	certOidcIssuer      = "https://token.actions.githubusercontent.com"
 )
 
 // GetRekorEntries finds all entry UUIDs by the digest of the artifact binary.
@@ -51,7 +68,7 @@ func GetRekorEntries(rClient *client.Rekor, dsse dsselib.Envelope) ([]string, er
 		switch t := err.(type) {
 		case *index.SearchIndexDefault:
 			if t.Code() == http.StatusNotImplemented {
-				return nil, fmt.Errorf("search index not enabled on %v", viper.GetString("rekor_server"))
+				return nil, fmt.Errorf("search index not enabled on %v", defaultRekorAddr)
 			}
 			return nil, err
 		default:
@@ -66,14 +83,141 @@ func GetRekorEntries(rClient *client.Rekor, dsse dsselib.Envelope) ([]string, er
 	return resp.GetPayload(), nil
 }
 
+func verifyTlogEntry(ctx context.Context, rekorClient *client.Rekor, uuid string) (*models.LogEntryAnon, error) {
+	params := entries.NewGetLogEntryByUUIDParamsWithContext(ctx)
+	params.EntryUUID = uuid
+
+	lep, err := rekorClient.Entries.GetLogEntryByUUID(params)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(lep.Payload) != 1 {
+		return nil, errors.New("UUID value can not be extracted")
+	}
+	e := lep.Payload[params.EntryUUID]
+	if e.Verification == nil || e.Verification.InclusionProof == nil {
+		return nil, errors.New("inclusion proof not provided")
+	}
+
+	hashes := [][]byte{}
+	for _, h := range e.Verification.InclusionProof.Hashes {
+		hb, _ := hex.DecodeString(h)
+		hashes = append(hashes, hb)
+	}
+
+	rootHash, _ := hex.DecodeString(*e.Verification.InclusionProof.RootHash)
+	leafHash, _ := hex.DecodeString(params.EntryUUID)
+
+	v := logverifier.New(rfc6962.DefaultHasher)
+	if err := v.VerifyInclusionProof(*e.Verification.InclusionProof.LogIndex, *e.Verification.InclusionProof.TreeSize, hashes, rootHash, leafHash); err != nil {
+		return nil, fmt.Errorf("%w: %s", err, "verifying inclusion proof")
+	}
+
+	// Verify rekor's signature over the SET.
+	payload := bundle.RekorPayload{
+		Body:           e.Body,
+		IntegratedTime: *e.IntegratedTime,
+		LogIndex:       *e.LogIndex,
+		LogID:          *e.LogID,
+	}
+
+	pub, err := cosign.GetRekorPub(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s", err, "unable to fetch Rekor public keys from TUF repository")
+	}
+	rekorPubKey, err := cosign.PemToECDSAKey(pub)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s", err, "rekor pem to ecdsa")
+	}
+	err = cosign.VerifySET(payload, []byte(e.Verification.SignedEntryTimestamp), rekorPubKey)
+	return &e, err
+}
+
+func extractCert(e *models.LogEntryAnon) (*x509.Certificate, error) {
+	b, err := base64.StdEncoding.DecodeString(e.Body.(string))
+	if err != nil {
+		return nil, err
+	}
+
+	pe, err := models.UnmarshalProposedEntry(bytes.NewReader(b), runtime.JSONConsumer())
+	if err != nil {
+		return nil, err
+	}
+
+	eimpl, err := types.NewEntry(pe)
+	if err != nil {
+		return nil, err
+	}
+
+	var publicKeyB64 []byte
+	switch e := eimpl.(type) {
+	case *intotod.V001Entry:
+		publicKeyB64, err = e.IntotoObj.PublicKey.MarshalText()
+		if err != nil {
+			return nil, err
+		}
+	default:
+		return nil, errors.New("unexpected tlog entry type")
+	}
+
+	publicKey, err := base64.StdEncoding.DecodeString(string(publicKeyB64))
+	if err != nil {
+		return nil, err
+	}
+
+	certs, err := cryptoutils.UnmarshalCertificatesFromPEM(publicKey)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(certs) != 1 {
+		return nil, errors.New("unexpected number of cert pem tlog entry")
+	}
+
+	return certs[0], err
+}
+
 // FindSigningCertificate finds and verifies a matching signing certificate from a list of Rekor entry UUIDs.
-func FindSigningCertificate(uuids []string, dsse dsselib.Envelope) (*x509.Certificate, error) {
+func FindSigningCertificate(ctx context.Context, uuids []string, dssePayload dsselib.Envelope, rClient *client.Rekor) (*x509.Certificate, error) {
+	attBytes, err := cjson.MarshalCanonical(dssePayload)
+	if err != nil {
+		return nil, err
+	}
 	// Iterate through each matching UUID and perform:
 	//   * Verify TLOG entry (inclusion and signed entry timestamp against Rekor pubkey).
-	//   * Check if the signing certificate verifies the dsse envelope.
 	//   * Verify the signing certificate against the Fulcio root CA.
+	//   * Verify dsse envelope signature against signing certificate.
 	//   * Check signature expiration against IntegratedTime in entry.
 	//   * If all succeed, return the signing certificate.
+	for _, uuid := range uuids {
+		entry, err := verifyTlogEntry(ctx, rClient, uuid)
+		if err != nil {
+			continue
+		}
+		cert, err := extractCert(entry)
+		if err != nil {
+			continue
+		}
+		co := &cosign.CheckOpts{
+			RootCerts:      fulcio.GetRoots(),
+			CertOidcIssuer: certOidcIssuer,
+		}
+		verifier, err := cosign.ValidateAndUnpackCert(cert, co)
+		if err != nil {
+			continue
+		}
+		verifier = dsse.WrapVerifier(verifier)
+		if err := verifier.VerifySignature(bytes.NewReader(attBytes), bytes.NewReader(attBytes)); err != nil {
+			continue
+		}
+		it := time.Unix(*entry.IntegratedTime, 0)
+		if err := cosign.CheckExpiry(cert, it); err != nil {
+			continue
+		}
+		// success!
+		return cert, nil
+	}
 
 	return nil, errors.New("could not find a matching signature entry")
 }
