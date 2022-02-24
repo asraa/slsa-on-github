@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/url"
 	"strings"
 	"time"
 
@@ -25,7 +24,6 @@ import (
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/bundle"
-	sigs "github.com/sigstore/cosign/pkg/signature"
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
 	"github.com/sigstore/rekor/pkg/generated/client/index"
@@ -47,6 +45,12 @@ var (
 	errorInvalidDssePayload = errors.New("invalid DSSE envelope payload")
 	errorRekorSearch        = errors.New("error searching rekor entries")
 )
+
+func EnvelopeFromBytes(payload []byte) (env *dsselib.Envelope, err error) {
+	env = &dsselib.Envelope{}
+	err = json.Unmarshal(payload, env)
+	return
+}
 
 // Get SHA256 Subject Digest from the provenance statement.
 func getSha256Digest(env dsselib.Envelope) (string, error) {
@@ -79,10 +83,10 @@ func GetRekorEntries(rClient *client.Rekor, env dsselib.Envelope) ([]string, err
 
 	// Use search index to find rekor entry UUIDs that match Subject Digest.
 	params := index.NewSearchIndexParams()
-	params.Query = &models.SearchIndex{Hash: fmt.Sprintf("sha256%v", hash)}
+	params.Query = &models.SearchIndex{Hash: fmt.Sprintf("sha256:%v", hash)}
 	resp, err := rClient.Index.SearchIndex(params)
 	if err != nil {
-		return nil, errorRekorSearch
+		return nil, fmt.Errorf("%w: %s", errorRekorSearch, err.Error())
 	}
 
 	if len(resp.Payload) == 0 {
@@ -193,6 +197,7 @@ func FindSigningCertificate(ctx context.Context, uuids []string, dssePayload dss
 	if err != nil {
 		return nil, err
 	}
+
 	// Iterate through each matching UUID and perform:
 	//   * Verify TLOG entry (inclusion and signed entry timestamp against Rekor pubkey).
 	//   * Verify the signing certificate against the Fulcio root CA.
@@ -225,6 +230,7 @@ func FindSigningCertificate(ctx context.Context, uuids []string, dssePayload dss
 			continue
 		}
 		// success!
+		fmt.Printf("Verified against tlog entry %d\n", *entry.LogIndex)
 		return cert, nil
 	}
 
@@ -242,24 +248,24 @@ func getExtension(cert *x509.Certificate, oid string) string {
 
 // GetWorkflowFromCertificate gets the workflow content from the Fulcio authenticated content.
 func GetWorkflowFromCertificate(cert *x509.Certificate) (*github.RepositoryContent, error) {
-	// TODO: Verify trigger?
-	jobWorkflowRef := sigs.CertSubject(cert)
-	sha := getExtension(cert, "1.3.6.1.4.1.57264.1.3")
+	repository := getExtension(cert, "1.3.6.1.4.1.57264.1.5")
+	sha := getExtension(cert, "1.3.6.1.4.1.57264.1.2")
+	workflow := getExtension(cert, "1.3.6.1.4.1.57264.1.4")
 
-	// The job-workflow-ref is `{owner}/{repo}/{path}/{filename}@{ref}`
-	jobUri, err := url.Parse(jobWorkflowRef)
-	if err != nil {
-		return nil, err
+	if repository == "" || sha == "" || workflow == "" {
+		return nil, errors.New("missing extension information from certificate")
 	}
 
-	pathParts := strings.SplitN(jobUri.Path, "/", 4)
-	org := pathParts[1]
-	repo := pathParts[2]
-	filePath := strings.SplitN(pathParts[3], "@", 2)
+	pathParts := strings.SplitN(repository, "/", 3)
+	if len(pathParts) != 2 {
+		return nil, errors.New("malformed repository")
+	}
+	org := pathParts[0]
+	repo := pathParts[1]
 
 	// Checkout the workflow path at the commit hash from the cert.
 	ctx := context.Background()
 	client := github.NewClient(nil)
-	workflowContent, _, _, err := client.Repositories.GetContents(ctx, org, repo, filePath[0], &github.RepositoryContentGetOptions{Ref: sha})
+	workflowContent, _, _, err := client.Repositories.GetContents(ctx, org, repo, workflow, &github.RepositoryContentGetOptions{Ref: sha})
 	return workflowContent, err
 }
