@@ -65,11 +65,6 @@ func TestTopLevelEnv(t *testing.T) {
 			if !errCmp(err, tt.expected) {
 				t.Errorf(cmp.Diff(err, tt.expected))
 			}
-
-			err = workflow.validateTopLevelDefinitions()
-			if !errCmp(err, tt.expected) {
-				t.Errorf(cmp.Diff(err, tt.expected))
-			}
 		})
 	}
 }
@@ -197,11 +192,6 @@ func TestTopLevelDefaults(t *testing.T) {
 			if !errCmp(err, tt.expected) {
 				t.Errorf(cmp.Diff(err, tt.expected))
 			}
-
-			err = workflow.validateTopLevelDefinitions()
-			if !errCmp(err, tt.expected) {
-				t.Errorf(cmp.Diff(err, tt.expected))
-			}
 		})
 	}
 }
@@ -255,16 +245,6 @@ func TestValidateRunners(t *testing.T) {
 			}
 
 			err = workflow.validateRunners()
-			if !errCmp(err, tt.expected) {
-				t.Errorf(cmp.Diff(err, tt.expected))
-			}
-
-			err = workflow.validateTopLevelDefinitions()
-			if !errCmp(err, tt.expected) {
-				t.Errorf(cmp.Diff(err, tt.expected))
-			}
-
-			err = workflow.validateUntrustedJobDefinitions()
 			if !errCmp(err, tt.expected) {
 				t.Errorf(cmp.Diff(err, tt.expected))
 			}
@@ -593,11 +573,6 @@ func TestTopLevelPermissions(t *testing.T) {
 			if !errCmp(err, tt.expected) {
 				t.Errorf(cmp.Diff(err, tt.expected))
 			}
-
-			err = workflow.validateTopLevelDefinitions()
-			if !errCmp(err, tt.expected) {
-				t.Errorf(cmp.Diff(err, tt.expected))
-			}
 		})
 	}
 }
@@ -732,7 +707,6 @@ func TestJobLevelPermissions(t *testing.T) {
 			if len(workflow.workflow.Jobs) == 0 {
 				panic(fmt.Errorf("no jobs in the workflow: %s", tt.name))
 			}
-			var e error
 			for name, job := range workflow.workflow.Jobs {
 				val, exists := tt.expected[name]
 				if !exists {
@@ -742,16 +716,6 @@ func TestJobLevelPermissions(t *testing.T) {
 				if !errCmp(err, val) {
 					t.Errorf(cmp.Diff(err, val))
 				}
-				// Remember the error. All our examples have the same error for each
-				// job so this works.
-				if err != nil {
-					e = val
-				}
-			}
-
-			err = workflow.validateUntrustedJobDefinitions()
-			if !errCmp(err, e) {
-				t.Errorf(cmp.Diff(err, e, cmp.AllowUnexported()))
 			}
 		})
 	}
