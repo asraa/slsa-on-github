@@ -65,6 +65,11 @@ func TestTopLevelEnv(t *testing.T) {
 			if !errCmp(err, tt.expected) {
 				t.Errorf(cmp.Diff(err, tt.expected))
 			}
+
+			err = workflow.validateTopLevelDefinitions()
+			if !errCmp(err, tt.expected) {
+				t.Errorf(cmp.Diff(err, tt.expected))
+			}
 		})
 	}
 }
@@ -146,7 +151,7 @@ func TestJobLevelEnv(t *testing.T) {
 				if !exists {
 					panic(fmt.Errorf("%s job does not exist", name))
 				}
-				err = workflow.validateJobLevelEnv(job)
+				err = workflow.validateTrustedReusableWorkflowEnv(job)
 				if !errCmp(err, val) {
 					t.Errorf(cmp.Diff(err, val))
 				}
@@ -192,11 +197,16 @@ func TestTopLevelDefaults(t *testing.T) {
 			if !errCmp(err, tt.expected) {
 				t.Errorf(cmp.Diff(err, tt.expected))
 			}
+
+			err = workflow.validateTopLevelDefinitions()
+			if !errCmp(err, tt.expected) {
+				t.Errorf(cmp.Diff(err, tt.expected))
+			}
 		})
 	}
 }
 
-func TestValidateRunner(t *testing.T) {
+func TestValidateRunners(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -244,7 +254,17 @@ func TestValidateRunner(t *testing.T) {
 				panic(fmt.Errorf("WorkflowFromBytes: %w", err))
 			}
 
-			err = workflow.validateRunner()
+			err = workflow.validateRunners()
+			if !errCmp(err, tt.expected) {
+				t.Errorf(cmp.Diff(err, tt.expected))
+			}
+
+			err = workflow.validateTopLevelDefinitions()
+			if !errCmp(err, tt.expected) {
+				t.Errorf(cmp.Diff(err, tt.expected))
+			}
+
+			err = workflow.validateUntrustedJobDefinitions()
 			if !errCmp(err, tt.expected) {
 				t.Errorf(cmp.Diff(err, tt.expected))
 			}
@@ -318,6 +338,7 @@ func TestJobLevelRunner(t *testing.T) {
 				if !exists {
 					panic(fmt.Errorf("%s job does not exist", name))
 				}
+
 				err = workflow.validateJobRunner(job)
 				if !errCmp(err, val) {
 					t.Errorf(cmp.Diff(err, val))
@@ -379,7 +400,7 @@ func TestJobLevelStep(t *testing.T) {
 				if !exists {
 					panic(fmt.Errorf("%s job does not exist", name))
 				}
-				err = workflow.validateJobSteps(job)
+				err = workflow.validateTrustedReusableWorkflowSteps(job)
 				if !errCmp(err, val) {
 					t.Errorf(cmp.Diff(err, val))
 				}
@@ -569,7 +590,11 @@ func TestTopLevelPermissions(t *testing.T) {
 			}
 
 			err = workflow.validateTopLevelPermissions()
+			if !errCmp(err, tt.expected) {
+				t.Errorf(cmp.Diff(err, tt.expected))
+			}
 
+			err = workflow.validateTopLevelDefinitions()
 			if !errCmp(err, tt.expected) {
 				t.Errorf(cmp.Diff(err, tt.expected))
 			}
@@ -707,6 +732,7 @@ func TestJobLevelPermissions(t *testing.T) {
 			if len(workflow.workflow.Jobs) == 0 {
 				panic(fmt.Errorf("no jobs in the workflow: %s", tt.name))
 			}
+			var e error
 			for name, job := range workflow.workflow.Jobs {
 				val, exists := tt.expected[name]
 				if !exists {
@@ -716,6 +742,16 @@ func TestJobLevelPermissions(t *testing.T) {
 				if !errCmp(err, val) {
 					t.Errorf(cmp.Diff(err, val))
 				}
+				// Remember the error. All our examples have the same error for each
+				// job so this works.
+				if err != nil {
+					e = val
+				}
+			}
+
+			err = workflow.validateUntrustedJobDefinitions()
+			if !errCmp(err, e) {
+				t.Errorf(cmp.Diff(err, e, cmp.AllowUnexported()))
 			}
 		})
 	}
@@ -832,9 +868,183 @@ func TestTrustedBuilderPermissions(t *testing.T) {
 				panic(fmt.Errorf("job not found in the workflow: %s", tt.job))
 			}
 
-			err = workflow.validateTrustedJobLevelPermissions(job)
+			err = workflow.validateTrustedReusableWorkflowPermissions(job)
 			if !errCmp(err, tt.expected) {
 				t.Errorf(cmp.Diff(err, tt.expected))
+			}
+		})
+	}
+}
+
+func TestTrustedJobDefinitions(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		path     string
+		expected error
+	}{
+		// {
+		// 	name:     "correct job permissions",
+		// 	path:     "./testdata/workflow-trusted-job-correct-permissions.yml",
+		// 	expected: nil,
+		// },
+		// {
+		// 	name:     "job permissions contents write",
+		// 	path:     "./testdata/workflow-trusted-job-contents-write.yml",
+		// 	expected: errorInvalidPermission,
+		// },
+		// {
+		// 	name:     "job permissions contents empty",
+		// 	path:     "./testdata/workflow-trusted-job-contents-empty.yml",
+		// 	expected: errorInvalidPermission,
+		// },
+		// {
+		// 	name:     "job permissions contents none",
+		// 	path:     "./testdata/workflow-trusted-job-contents-none.yml",
+		// 	expected: errorInvalidPermission,
+		// },
+		// {
+		// 	name:     "job permissions id-token read",
+		// 	path:     "./testdata/workflow-trusted-job-idtoken-read.yml",
+		// 	expected: errorInvalidPermission,
+		// },
+		// {
+		// 	name:     "job permissions id-token empty",
+		// 	path:     "./testdata/workflow-trusted-job-idtoken-empty.yml",
+		// 	expected: errorInvalidPermission,
+		// },
+		// {
+		// 	name:     "job permissions id-token none",
+		// 	path:     "./testdata/workflow-trusted-job-idtoken-none.yml",
+		// 	expected: errorInvalidPermission,
+		// },
+		// {
+		// 	name:     "job permissions read-all",
+		// 	path:     "./testdata/workflow-trusted-job-read-all.yml",
+		// 	expected: errorPermissionAllSet,
+		// },
+		// {
+		// 	name:     "job permissions write-all",
+		// 	path:     "./testdata/workflow-trusted-job-write-all.yml",
+		// 	expected: errorPermissionAllSet,
+		// },
+		// {
+		// 	name:     "job permissions empty",
+		// 	path:     "./testdata/workflow-trusted-job-empty.yml",
+		// 	expected: errorPermissionAllSet,
+		// },
+		// {
+		// 	name:     "job permissions additional",
+		// 	path:     "./testdata/workflow-trusted-job-additional.yml",
+		// 	expected: errorPermissionScopeTooMany,
+		// },
+		// {
+		// 	name:     "job permissions no id-token scope",
+		// 	path:     "./testdata/workflow-trusted-job-no-idtoken-scopes.yml",
+		// 	expected: errorPermissionNotSet,
+		// },
+		{
+			name:     "job permissions no contents scope",
+			path:     "./testdata/workflow-trusted-job-def-no-contents-scopes.yml",
+			expected: errorPermissionNotSet,
+		},
+	}
+	for _, tt := range tests {
+		tt := tt // Re-initializing variable so it is not changed while executing the closure below
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			content, err := os.ReadFile(tt.path)
+			if err != nil {
+				panic(fmt.Errorf("os.ReadFile: %w", err))
+			}
+			workflow, err := WorkflowFromBytes(content)
+			if err != nil {
+				panic(fmt.Errorf("WorkflowFromBytes: %w", err))
+			}
+
+			if len(workflow.workflow.Jobs) == 0 {
+				panic(fmt.Errorf("no jobs in the workflow: %s", tt.name))
+			}
+
+			err = workflow.validateTrustedJobDefinitions()
+			if !errCmp(err, tt.expected) {
+				t.Errorf(cmp.Diff(err, tt.expected))
+			}
+		})
+	}
+}
+
+func TestGetTrustedBuilder(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		path     string
+		job      string
+		expected error
+	}{
+		{
+			name:     "single trusted job",
+			job:      "build",
+			path:     "./testdata/workflow-trusted-job-definition-single.yml",
+			expected: nil,
+		},
+		{
+			name:     "two trusted job",
+			job:      "build",
+			path:     "./testdata/workflow-trusted-job-definition-two.yml",
+			expected: errorMultipleJobsUseTrustedBuilder,
+		},
+		{
+			name:     "no trusted job",
+			path:     "./testdata/workflow-trusted-job-definition-none.yml",
+			expected: nil,
+		},
+	}
+	for _, tt := range tests {
+		tt := tt // Re-initializing variable so it is not changed while executing the closure below
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			content, err := os.ReadFile(tt.path)
+			if err != nil {
+				panic(fmt.Errorf("os.ReadFile: %w", err))
+			}
+			workflow, err := WorkflowFromBytes(content)
+			if err != nil {
+				panic(fmt.Errorf("WorkflowFromBytes: %w", err))
+			}
+
+			if len(workflow.workflow.Jobs) == 0 {
+				panic(fmt.Errorf("no jobs in the workflow: %s", tt.name))
+			}
+
+			job, err := workflow.getUniqueJobCallingTrustedReusableWorkflow()
+			if !errCmp(err, tt.expected) {
+				t.Errorf(cmp.Diff(err, tt.expected))
+			}
+
+			if err != nil || tt.job == "" {
+				return
+			}
+
+			expectedJob, exists := workflow.workflow.Jobs[tt.job]
+			if !exists {
+				panic(fmt.Errorf("job not found in the workflow: %s", tt.job))
+			}
+
+			if job == nil && expectedJob != nil {
+				t.Errorf("job is nil but expectedJob is not")
+			}
+
+			if job != nil && expectedJob == nil {
+				t.Errorf("job is not nil but expectedJob not")
+			}
+
+			if job != nil && (job.ID == nil || job.ID.Value != tt.job) {
+				t.Errorf("%v != %s", job.ID, tt.job)
 			}
 		})
 	}

@@ -16,9 +16,9 @@ jobs:
           echo "::set-output name=value::-X main.gitVersion=v1.2.3 -X main.gitSomething=somthg"
 
   build:
-    permissions:
+    permissions: 
       id-token: write
-      contents: read
+      status: read
     needs: args
     uses: laurentsimon/slsa-on-github/.github/workflows/slsa-builder-go.yml@feat/buildname
     with:

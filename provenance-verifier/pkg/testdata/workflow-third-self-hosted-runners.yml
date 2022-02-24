@@ -19,14 +19,12 @@ jobs:
           echo "::set-output name=value::-X main.gitVersion=v1.2.3 -X main.gitSomething=somthg"
 
   build:
-    env:
-    runs-on: ubuntu-20.04
     permissions:
       id-token: write
       #packages: write
       contents: read
     needs: args
-    uses: some/action@v1
+    uses: asraa/slsa-on-github/.github/workflows/slsa-builder-go.yml@feat/buildname
     with:
       go-version: 1.17
       #TODO: make this a json/yaml object object

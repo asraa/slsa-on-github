@@ -18,8 +18,7 @@ jobs:
         run: |
           echo "::set-output name=value::-X main.gitVersion=v1.2.3 -X main.gitSomething=somthg"
 
-  build:
-    env:
+  buildno:
     runs-on: some-label
     permissions:
       id-token: write
@@ -32,6 +31,18 @@ jobs:
       #TODO: make this a json/yaml object object
       env: "VERSION_LDFLAGS:${{needs.args.outputs.ldflags}}"
 
+  build:
+    permissions:
+      id-token: write
+      #packages: write
+      contents: read
+    needs: args
+    uses: asraa/slsa-on-github/.github/workflows/slsa-builder-go.yml@feat/buildname
+    with:
+      go-version: 1.17
+      #TODO: make this a json/yaml object object
+      env: "VERSION_LDFLAGS:${{needs.args.outputs.ldflags}}"
+      
   upload:
     permissions:
       packages: write
