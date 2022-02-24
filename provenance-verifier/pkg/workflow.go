@@ -416,10 +416,7 @@ func (w *Workflow) validateTrustedReusableWorkflowPermissions(job *actionlint.Jo
 
 	// No read-all.
 	if job.Permissions.All != nil {
-		if job.Permissions.All.Value == "" {
-			return fmt.Errorf("builder: %w: %s", errorPermissionScopeInvalidNumber, job.Permissions.All.Value)
-		}
-		return fmt.Errorf("builder: %w: %s", errorPermissionAllSet, job.Permissions.All.Value)
+		return fmt.Errorf("builder: %w: %s", errorPermissionScopeInvalidNumber, job.Permissions.All.Value)
 	}
 
 	// Scopes defined.

@@ -946,12 +946,12 @@ func Test_validateTrustedJobDefinitions(t *testing.T) {
 		{
 			name:     "job permissions read-all",
 			path:     "./testdata/workflow-trusted-job-read-all-trusted.yml",
-			expected: errorPermissionAllSet,
+			expected: errorPermissionScopeInvalidNumber,
 		},
 		{
 			name:     "job permissions write-all",
 			path:     "./testdata/workflow-trusted-job-write-all-trusted.yml",
-			expected: errorPermissionAllSet,
+			expected: errorPermissionScopeInvalidNumber,
 		},
 		{
 			name:     "job permissions empty",
@@ -1055,13 +1055,13 @@ func Test_validateTrustedReusableWorkflowPermissions(t *testing.T) {
 			name:     "job permissions read-all",
 			job:      "build",
 			path:     "./testdata/workflow-trusted-job-read-all.yml",
-			expected: errorPermissionAllSet,
+			expected: errorPermissionScopeInvalidNumber,
 		},
 		{
 			name:     "job permissions write-all",
 			job:      "build",
 			path:     "./testdata/workflow-trusted-job-write-all.yml",
-			expected: errorPermissionAllSet,
+			expected: errorPermissionScopeInvalidNumber,
 		},
 		{
 			name:     "job permissions empty",
@@ -1528,12 +1528,12 @@ func Test_validateJobLevelDefinitions(t *testing.T) {
 		{
 			name:     "job permissions read-all",
 			path:     "./testdata/workflow-trusted-job-read-all-trusted.yml",
-			expected: errorPermissionAllSet,
+			expected: errorPermissionScopeInvalidNumber,
 		},
 		{
 			name:     "job permissions write-all",
 			path:     "./testdata/workflow-trusted-job-write-all-trusted.yml",
-			expected: errorPermissionAllSet,
+			expected: errorPermissionScopeInvalidNumber,
 		},
 		{
 			name:     "job permissions empty",
@@ -1597,7 +1597,7 @@ func Test_validateJobLevelDefinitions(t *testing.T) {
 		{
 			name:     "job permission write-all",
 			path:     "./testdata/workflow-job-permissions-writeall-trusted.yml",
-			expected: errorPermissionAllSet,
+			expected: errorPermissionScopeInvalidNumber,
 		},
 		{
 			name:     "job permission mix write",
@@ -1974,12 +1974,12 @@ func Test_Validate(t *testing.T) {
 		{
 			name:     "job permissions read-all",
 			path:     "./testdata/workflow-trusted-job-read-all-trusted.yml",
-			expected: errorPermissionAllSet,
+			expected: errorPermissionScopeInvalidNumber,
 		},
 		{
 			name:     "job permissions write-all",
 			path:     "./testdata/workflow-trusted-job-write-all-trusted.yml",
-			expected: errorPermissionAllSet,
+			expected: errorPermissionScopeInvalidNumber,
 		},
 		{
 			name:     "job permissions empty",
@@ -2043,7 +2043,7 @@ func Test_Validate(t *testing.T) {
 		{
 			name:     "job permission write-all",
 			path:     "./testdata/workflow-job-permissions-writeall-trusted.yml",
-			expected: errorPermissionAllSet,
+			expected: errorPermissionScopeInvalidNumber,
 		},
 		{
 			name:     "job permission mix write",
