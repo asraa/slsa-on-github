@@ -356,25 +356,15 @@ jobs:
 
           echo "provenance generator is $PROVENANCE_BINARY"
 
-          # Create provenance
-          DIGEST="$UNTRUSTED_BINARY_HASH" ./"$PROVENANCE_BINARY" > "$UNTRUSTED_BINARY_NAME.intoto"
-
-          # Sign provenance
-          UNSIGNED_PROVENANCE="$UNTRUSTED_BINARY_NAME.intoto" ./"$PROVENANCE_BINARY" > "$UNTRUSTED_BINARY_NAME.signed.intoto"
-          echo "::set-output name=signed-provenance-name::$UNTRUSTED_BINARY_NAME.signed.intoto"
-
-      - name: Upload the provenance
-        uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 # v2.3.1
-        with:
-          name: "${{ needs.build-dry.outputs.go-binary-name }}.intoto"
-          path: "${{ needs.build-dry.outputs.go-binary-name }}.intoto"
-          if-no-files-found: error
-          retention-days: 5
+          # Create and sign provenance
+          # This sets signed-provenance-name to the name of the signed DSSE envelope.
+          DIGEST="$UNTRUSTED_BINARY_HASH" ./"$PROVENANCE_BINARY"
 
       - name: Upload the signed provenance
         uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 # v2.3.1
         with:
-          name: "${{ needs.build-dry.outputs.go-binary-name }}.signed.intoto"
-          path: "${{ needs.build-dry.outputs.go-binary-name }}.signed.intoto"
+          name: "${{ steps.sign-prov.outputs.signed-provenance-name }}"
+          path: "${{ steps.sign-prov.outputs.signed-provenance-name }}"
           if-no-files-found: error
           retention-days: 5
+
