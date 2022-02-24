@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
 	"net/url"
 	"strings"
 	"time"
@@ -44,20 +43,38 @@ const (
 	certOidcIssuer      = "https://token.actions.githubusercontent.com"
 )
 
-// GetRekorEntries finds all entry UUIDs by the digest of the artifact binary.
-func GetRekorEntries(rClient *client.Rekor, dsse dsselib.Envelope) ([]string, error) {
-	// Get Subject Digest from the provenance statement.
+var (
+	errorInvalidDssePayload = errors.New("invalid DSSE envelope payload")
+	errorRekorSearch        = errors.New("error searching rekor entries")
+)
+
+// Get SHA256 Subject Digest from the provenance statement.
+func getSha256Digest(env dsselib.Envelope) (string, error) {
+	pyld, err := base64.StdEncoding.DecodeString(env.Payload)
+	if err != nil {
+		return "", fmt.Errorf("%w: %s", errorInvalidDssePayload, "decoding payload")
+	}
 	prov := &intoto.ProvenanceStatement{}
-	if err := json.Unmarshal([]byte(dsse.Payload), prov); err != nil {
-		return nil, err
+	if err := json.Unmarshal([]byte(pyld), prov); err != nil {
+		return "", fmt.Errorf("%w: %s", errorInvalidDssePayload, "unmarshalling json")
 	}
 	if len(prov.Subject) == 0 {
-		return nil, errors.New("provenance statement does not contain any subject digests")
+		return "", fmt.Errorf("%w: %s", errorInvalidDssePayload, "no subjects")
 	}
 	digestSet := prov.Subject[0].Digest
 	hash, exists := digestSet["sha256"]
 	if !exists {
-		return nil, errors.New("digest set does not contain sha256 digest")
+		return "", fmt.Errorf("%w: %s", errorInvalidDssePayload, "no sha256 subject digest")
+	}
+	return hash, nil
+}
+
+// GetRekorEntries finds all entry UUIDs by the digest of the artifact binary.
+func GetRekorEntries(rClient *client.Rekor, env dsselib.Envelope) ([]string, error) {
+	// Get Subject Digest from the provenance statement.
+	hash, err := getSha256Digest(env)
+	if err != nil {
+		return nil, err
 	}
 
 	// Use search index to find rekor entry UUIDs that match Subject Digest.
@@ -65,19 +82,11 @@ func GetRekorEntries(rClient *client.Rekor, dsse dsselib.Envelope) ([]string, er
 	params.Query = &models.SearchIndex{Hash: fmt.Sprintf("sha256%v", hash)}
 	resp, err := rClient.Index.SearchIndex(params)
 	if err != nil {
-		switch t := err.(type) {
-		case *index.SearchIndexDefault:
-			if t.Code() == http.StatusNotImplemented {
-				return nil, fmt.Errorf("search index not enabled on %v", defaultRekorAddr)
-			}
-			return nil, err
-		default:
-			return nil, err
-		}
+		return nil, errorRekorSearch
 	}
 
 	if len(resp.Payload) == 0 {
-		return nil, fmt.Errorf("no matching entries found")
+		return nil, fmt.Errorf("%w: no matching entries found", errorRekorSearch)
 	}
 
 	return resp.GetPayload(), nil
