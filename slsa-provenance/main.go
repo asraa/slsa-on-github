@@ -174,7 +174,7 @@ func main() {
 	if err := ioutil.WriteFile(filename, payload, 0600); err != nil {
 		panic(err)
 	}
-	fmt.Printf(`::set-output name=signed-provenance-name::%s\n`, filename)
+	fmt.Printf("::set-output name=signed-provenance-name::%s\n", filename)
 }
 
 func verifyProvenanceName(name string) error {
