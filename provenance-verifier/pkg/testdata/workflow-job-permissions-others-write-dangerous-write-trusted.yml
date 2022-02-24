@@ -2,6 +2,9 @@ name: Test SLSA
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+  id-token: 
 
 jobs:
   args:

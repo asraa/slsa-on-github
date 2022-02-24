@@ -16,7 +16,6 @@ var (
 	errorDeclaredStep                  = errors.New("steps are declared")
 	errorInvalidReUsableWorkflow       = errors.New("invalid re-usable workflow call")
 	errorInvalidPermission             = errors.New("invalid permission")
-	errorPermissionsDefaultWrite       = errors.New("no permission declared")
 	errorPermissionsNotReadAll         = errors.New("permissions are not set to `read-all`")
 	errorPermissionWrite               = errors.New("permission is set to write")
 	errorInternalPermission            = errors.New("internal error parsing permissions")
@@ -336,7 +335,7 @@ func (w *Workflow) isJobCallingTrustedReusableWorkflow(job *actionlint.Job) (boo
 func (w *Workflow) validateTopLevelPermissions() error {
 	// No definition means all permissions are set write by default.
 	if w.workflow.Permissions == nil {
-		return fmt.Errorf("%w", errorPermissionsDefaultWrite)
+		return fmt.Errorf("top level: %w", errorPermissionNotSet)
 	}
 
 	return validateUntrustedPermissions(w.workflow.Permissions)
@@ -417,6 +416,9 @@ func (w *Workflow) validateTrustedReusableWorkflowPermissions(job *actionlint.Jo
 
 	// No read-all.
 	if job.Permissions.All != nil {
+		if job.Permissions.All.Value == "" {
+			return fmt.Errorf("builder: %w: %s", errorPermissionScopeInvalidNumber, job.Permissions.All.Value)
+		}
 		return fmt.Errorf("builder: %w: %s", errorPermissionAllSet, job.Permissions.All.Value)
 	}
 

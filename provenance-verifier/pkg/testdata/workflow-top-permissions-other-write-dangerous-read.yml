@@ -2,7 +2,6 @@ name: Test SLSA
 on:
   workflow_dispatch:
 
-
 permissions:
   checks: write
   deployments: write

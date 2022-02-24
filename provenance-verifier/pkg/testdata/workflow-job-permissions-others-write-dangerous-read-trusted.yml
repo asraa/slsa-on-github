@@ -2,6 +2,7 @@ name: Test SLSA
 on:
   workflow_dispatch:
 
+permissions:
 
 jobs:
   args:
@@ -19,7 +20,7 @@ jobs:
       security-events: write
       statuses: write
       contents: read
-      
+ 
     outputs:
       ldflags: ${{ steps.ldflags.outputs.value }}
     steps:

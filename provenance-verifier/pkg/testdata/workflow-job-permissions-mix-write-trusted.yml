@@ -18,7 +18,7 @@ jobs:
     needs: args
     permissions: 
       contents: read
-      actions: write
+      id-token: write
     uses: asraa/slsa-on-github/.github/workflows/slsa-builder-go.yml@feat/buildname
     with:
       go-version: 1.17
