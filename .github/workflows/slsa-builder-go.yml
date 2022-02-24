@@ -10,7 +10,7 @@ env:
   BUILDER_BINARY: builder
   PROVENANCE_BINARY: provenance
   BUILDER_REPOSITORY: asraa/slsa-on-github
-  BUILDER_REF: main
+  BUILDER_REF: prov-write
 
 ###################################################################
 #                                                                 #
@@ -356,17 +356,15 @@ jobs:
 
           echo "provenance generator is $PROVENANCE_BINARY"
 
-          # Create provenance
+          # Create and sign provenance
+          # This sets signed-provenance-name to the name of the signed DSSE envelope.
           DIGEST="$UNTRUSTED_BINARY_HASH" ./"$PROVENANCE_BINARY"
-
-          # Sign provenance
-          UNSIGNED_PROVENANCE="$UNTRUSTED_BINARY_NAME.intoto" ./"$PROVENANCE_BINARY"
 
       - name: Upload the signed provenance
         uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 # v2.3.1
         with:
-          name: "${{ needs.build-dry.outputs.go-binary-name }}.intoto.sig"
-          path: "${{ needs.build-dry.outputs.go-binary-name }}.intoto.sig"
+          name: "${{ steps.sign-prov.outputs.signed-provenance-name }}"
+          path: "${{ steps.sign-prov.outputs.signed-provenance-name }}"
           if-no-files-found: error
           retention-days: 5
 
