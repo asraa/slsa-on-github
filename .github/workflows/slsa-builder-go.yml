@@ -4,8 +4,6 @@ permissions:
   contents: read
 
 env:
-  #TODO: let caller upload ?
-  REGISTRY: ghcr.io
   GENERATED_BINARY_NAME: compiled-binary
   BUILDER_BINARY: builder
   PROVENANCE_BINARY: provenance
@@ -24,11 +22,6 @@ on:
         description: "The go version to use"
         required: true
         type: string
-      upload-location:
-        description: "Upload registry location"
-        required: false
-        type: string
-        default: "$REGISTRY/${{ github.repository }}"
       env:
         description: "Env variables to pass to the builder"
         required: false
