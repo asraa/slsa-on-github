@@ -6,6 +6,7 @@ permissions:
 env:
   #TODO: let caller upload ?
   REGISTRY: ghcr.io
+  RELEASER_CONFIG: .slsa-goreleaser.yml
   GENERATED_BINARY_NAME: compiled-binary
   BUILDER_BINARY: builder
   PROVENANCE_BINARY: provenance
@@ -171,6 +172,7 @@ jobs:
         shell: bash
         env:
           BUILDER_BINARY: "${{ env.BUILDER_BINARY }}"
+          CONFIG_FILE: "${{ env.RELEASER_CONFIG }}"
           UNTRUSTED_ENVS: "${{ inputs.env }}"
           UNTRUSTED_WORKING_DIR: "${{ inputs.working-dir }}"
         run: |
@@ -180,8 +182,8 @@ jobs:
           # to compute the actual directory.
           # Note: this outputs information about resolved arguments, etc.
           # the values are trusted because the compiler is not invoked.
-          echo ./"$BUILDER_BINARY" ./releaser.yml "$UNTRUSTED_ENVS" --dry
-          ./"$BUILDER_BINARY" ./releaser.yml "$UNTRUSTED_ENVS" --dry
+          echo ./"$BUILDER_BINARY" "$CONFIG_FILE" "$UNTRUSTED_ENVS" --dry
+          ./"$BUILDER_BINARY" "$CONFIG_FILE" "$UNTRUSTED_ENVS" --dry
 
   build:
     outputs:
@@ -241,6 +243,7 @@ jobs:
         shell: bash
         env:
           BUILDER_BINARY: "${{ env.BUILDER_BINARY }}"
+          CONFIG_FILE: "${{ env.RELEASER_CONFIG }}"
           UNTRUSTED_ENVS: "${{ inputs.env }}"
           UNTRUSTED_WORKING_DIR: "${{ inputs.working-dir }}"
         run: |
@@ -251,9 +254,9 @@ jobs:
 
           # TODO: pass UNTRUSTED_WORKING_DIR to builder, which will use realpath()
           # to compute the actual directory.
-          echo "./$BUILDER_BINARY" ./releaser.yml "$UNTRUSTED_ENVS"
+          echo "./$BUILDER_BINARY" "$CONFIG_FILE" "$UNTRUSTED_ENVS"
           export OUTPUT_BINARY="${{ env.GENERATED_BINARY_NAME }}"
-          ./"$BUILDER_BINARY" ./releaser.yml "$UNTRUSTED_ENVS" &>/dev/null
+          ./"$BUILDER_BINARY" "$CONFIG_FILE" "$UNTRUSTED_ENVS" &>/dev/null
 
 
       - name: Compute binary hash
