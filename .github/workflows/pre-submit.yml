@@ -4,7 +4,7 @@ on: [pull_request, workflow_dispatch]
 permissions: read-all
 
 env:
-  BUILDER_DIR: build-go
+  BUILDER_DIR: builder
   PROVENANCE_GENERATOR_DIR: slsa-provenance
   PROVENANCE_VERIFIER_DIR: provenance-verifier
 
