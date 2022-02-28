@@ -9,20 +9,22 @@ import (
 )
 
 var (
-	errorInvalidGitHubWorkflow   = errors.New("invalid GitHub workflow")
-	errorDeclaredEnv             = errors.New("env variables are declared")
-	errorDeclaredDefaults        = errors.New("defaults are declared")
-	errorSelfHostedRunner        = errors.New("self-hosted runner not supported")
-	errorDeclaredStep            = errors.New("steps are declared")
-	errorInvalidReUsableWorkflow = errors.New("invalid re-usable workflow call")
-	errorInvalidPermission       = errors.New("invalid permission")
-	errorPermissionsDefaultWrite = errors.New("no permission declared")
-	errorPermissionsNotReadAll   = errors.New("permissions are not set to `read-all`")
-	errorPermissionWrite         = errors.New("permission is set to write")
-	errorInternalPermission      = errors.New("internal error parsing permissions")
-	errorPermissionAllSet        = errors.New("permissions all set")
-	errorPermissionScopeTooMany  = errors.New("too many permissions scopes defined")
-	errorPermissionNotSet        = errors.New("permissions not set")
+	errorInvalidGitHubWorkflow         = errors.New("invalid GitHub workflow")
+	errorDeclaredEnv                   = errors.New("env variables are declared")
+	errorDeclaredDefaults              = errors.New("defaults are declared")
+	errorSelfHostedRunner              = errors.New("self-hosted runner not supported")
+	errorDeclaredStep                  = errors.New("steps are declared")
+	errorInvalidReUsableWorkflow       = errors.New("invalid re-usable workflow call")
+	errorInvalidPermission             = errors.New("invalid permission")
+	errorPermissionsNotReadAll         = errors.New("permissions are not set to `read-all`")
+	errorPermissionWrite               = errors.New("permission is set to write")
+	errorInternalPermission            = errors.New("internal error parsing permissions")
+	errorPermissionAllSet              = errors.New("permissions all set")
+	errorPermissionScopeInvalidNumber  = errors.New("invalid number of permission scopes")
+	errorPermissionNotSet              = errors.New("permissions not set")
+	errorMultipleJobsUseTrustedBuilder = errors.New("trusted builder used in multiple jobs")
+	errorInternalUniqueJob             = errors.New("internal error retrieving trusted job")
+	errorNoTrustedJobFound             = errors.New("no trusted job found")
 )
 
 // https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#choosing-github-hosted-runners.
@@ -60,6 +62,146 @@ func WorkflowFromBytes(content []byte) (*Workflow, error) {
 	return &self, nil
 }
 
+func (w *Workflow) Validate() error {
+	// Verify the top-level constraints.
+	if err := w.validateTopLevelDefinitions(); err != nil {
+		return err
+	}
+
+	// Verify the job-level constraints.
+	if err := w.validateJobLevelDefinitions(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (w *Workflow) validateTopLevelDefinitions() error {
+	// Defaults.
+	// Note: not strictly necessary because a re-usable workflow
+	// does not inherit the defaults.
+	if err := w.validateTopLevelDefaults(); err != nil {
+		return err
+	}
+
+	// Env variables.
+	// Note: not strictly necessary because a re-usable workflow
+	// does not inherit the env variables.
+	if err := w.validateTopLevelEnv(); err != nil {
+		return err
+	}
+
+	// Runner.
+	// Note: not strictly necessary because self-hosted
+	// runners cannot interfere with the re-usable workflow
+	// that runs in its own VM. The call below includes
+	// all jobs, including the trusted re-usable workflow.
+	if err := w.validateRunners(); err != nil {
+		return err
+	}
+
+	// Token permissions.
+	// Note: this is needed.
+	if err := w.validateTopLevelPermissions(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (w *Workflow) validateJobLevelDefinitions() error {
+	// Verify the trusted job definitions.
+	if err := w.validateTrustedJobDefinitions(); err != nil {
+		return err
+	}
+
+	// Verify other jobs' definitions.
+	if err := w.validateUntrustedJobDefinitions(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (w *Workflow) validateTrustedJobDefinitions() error {
+	// Get the trusted builder, if it was niquely defined.
+	trustedJob, err := w.getUniqueJobCallingTrustedReusableWorkflow()
+	if err != nil {
+		return err
+	}
+
+	if trustedJob == nil {
+		return fmt.Errorf("%w", errorInternalUniqueJob)
+	}
+
+	// Runner.
+	// Note: not necessary because re-usable workflows do not accept
+	// runner labels defined in the calling workflow.
+	if err := w.validateJobRunner(trustedJob); err != nil {
+		return err
+	}
+
+	// Defaults.
+	// Note: Not certain this is necessary, but verify it anyway.
+	if err := w.validateJobLevelDefaults(trustedJob); err != nil {
+		return err
+	}
+
+	// Env variables.
+	// Note: not strictly necessary because re-usable workflows do not accept
+	// env variables defined in the calling workflow.
+	if err := w.validateTrustedReusableWorkflowEnv(trustedJob); err != nil {
+		return err
+	}
+
+	// Steps.
+	// Note: not strictly necessary because re-usable workflows do not accept
+	// additional steps defined in the calling workflow.
+	if err := w.validateTrustedReusableWorkflowSteps(trustedJob); err != nil {
+		return err
+	}
+
+	// Permissions.
+	// Note: this one is necessary.
+	if err := w.validateTrustedReusableWorkflowPermissions(trustedJob); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (w *Workflow) validateUntrustedJobDefinitions() error {
+	for _, job := range w.workflow.Jobs {
+		if job == nil {
+			continue
+		}
+
+		trusted, err := w.isJobCallingTrustedReusableWorkflow(job)
+		if err != nil {
+			return err
+		}
+
+		if trusted {
+			continue
+		}
+
+		// Verify untrusted job.
+
+		// Runner.
+		// Note: not necessary because because other jobs cannot affect
+		// the trusted re-usable workflow which runs in its own VM.
+		if err := w.validateJobRunner(job); err != nil {
+			return err
+		}
+
+		// Permissions.
+		// Note: this one is necessary.
+		if err := w.validateUntrustedJobLevelPermissions(job); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // =============== Defaults ================ //
 func (w *Workflow) validateTopLevelDefaults() error {
 	return validateDefaults(w.workflow.Defaults, "top level")
@@ -81,7 +223,7 @@ func (w *Workflow) validateTopLevelEnv() error {
 	return validateEnv(w.workflow.Env, "top level")
 }
 
-func (w *Workflow) validateJobLevelEnv(job *actionlint.Job) error {
+func (w *Workflow) validateTrustedReusableWorkflowEnv(job *actionlint.Job) error {
 	return validateEnv(job.Env, fmt.Sprintf("job %s", getJobIdentity(job)))
 }
 
@@ -93,7 +235,7 @@ func validateEnv(env *actionlint.Env, msg string) error {
 }
 
 // =============== Runners ================ //
-func (w *Workflow) validateRunner() error {
+func (w *Workflow) validateRunners() error {
 	for _, job := range w.workflow.Jobs {
 		if job == nil {
 			continue
@@ -133,7 +275,7 @@ func validateJobRunner(runner *actionlint.Runner, allowed map[string]bool) error
 }
 
 // =============== Steps ================ //
-func (w *Workflow) validateJobSteps(job *actionlint.Job) error {
+func (w *Workflow) validateTrustedReusableWorkflowSteps(job *actionlint.Job) error {
 	for _, step := range job.Steps {
 		if step == nil {
 			continue
@@ -145,6 +287,36 @@ func (w *Workflow) validateJobSteps(job *actionlint.Job) error {
 }
 
 // =============== Re-usable workflow ================ //
+func (w *Workflow) getUniqueJobCallingTrustedReusableWorkflow() (*actionlint.Job, error) {
+	var rjob *actionlint.Job
+	for _, job := range w.workflow.Jobs {
+		if job == nil {
+			continue
+		}
+
+		b, err := w.isJobCallingTrustedReusableWorkflow(job)
+		if err != nil {
+			return nil, err
+		}
+
+		if !b {
+			continue
+		}
+
+		if rjob != nil {
+			return nil, fmt.Errorf("%s: %w: %s", getJobIdentity(rjob), errorMultipleJobsUseTrustedBuilder, getJobIdentity(job))
+		}
+
+		rjob = job
+	}
+
+	if rjob == nil {
+		return nil, fmt.Errorf("%w", errorNoTrustedJobFound)
+	}
+
+	return rjob, nil
+}
+
 func (w *Workflow) isJobCallingTrustedReusableWorkflow(job *actionlint.Job) (bool, error) {
 	if job == nil || job.WorkflowCall == nil || job.WorkflowCall.Uses == nil {
 		return false, nil
@@ -163,7 +335,7 @@ func (w *Workflow) isJobCallingTrustedReusableWorkflow(job *actionlint.Job) (boo
 func (w *Workflow) validateTopLevelPermissions() error {
 	// No definition means all permissions are set write by default.
 	if w.workflow.Permissions == nil {
-		return fmt.Errorf("%w", errorPermissionsDefaultWrite)
+		return fmt.Errorf("top level: %w", errorPermissionNotSet)
 	}
 
 	return validateUntrustedPermissions(w.workflow.Permissions)
@@ -232,7 +404,7 @@ func validateUntrustedPermissions(permissions *actionlint.Permissions) error {
 	return nil
 }
 
-func (w *Workflow) validateTrustedJobLevelPermissions(job *actionlint.Job) error {
+func (w *Workflow) validateTrustedReusableWorkflowPermissions(job *actionlint.Job) error {
 	if job == nil {
 		return fmt.Errorf("%w", errorInternalPermission)
 	}
@@ -244,12 +416,12 @@ func (w *Workflow) validateTrustedJobLevelPermissions(job *actionlint.Job) error
 
 	// No read-all.
 	if job.Permissions.All != nil {
-		return fmt.Errorf("builder: %w: %s", errorPermissionAllSet, job.Permissions.All.Value)
+		return fmt.Errorf("builder: %w: %s", errorPermissionScopeInvalidNumber, job.Permissions.All.Value)
 	}
 
 	// Scopes defined.
 	if len(job.Permissions.Scopes) != 2 {
-		return fmt.Errorf("builder: %w", errorPermissionScopeTooMany)
+		return fmt.Errorf("builder: %w", errorPermissionScopeInvalidNumber)
 	}
 
 	// Validate the `id-token` permissions is set to `write`.

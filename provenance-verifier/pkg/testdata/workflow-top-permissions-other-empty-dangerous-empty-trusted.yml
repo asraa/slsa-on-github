@@ -2,21 +2,22 @@ name: Test SLSA
 on:
   workflow_dispatch:
 
+
 permissions:
-  checks: write
-  deployments: write
-  discussions: write
-  issues: write
-  metadata: write
-  packages: write
-  pages: write
-  pull-requests: write
-  repository-projects: write
-  security-events: write
-  statuses: write
-  contents: read
-  id-token: read
-  actions: read
+  checks: 
+  deployments: 
+  discussions: 
+  issues: 
+  metadata: 
+  packages: 
+  pages: 
+  pull-requests: 
+  repository-projects: 
+  security-events: 
+  statuses: 
+  contents: 
+  id-token: 
+  actions: 
 
 jobs:
   args:
@@ -36,7 +37,7 @@ jobs:
       #packages: write
       contents: read
     needs: args
-    uses: laurentsimon/slsa-on-github/.github/workflows/slsa-builder-go.yml@feat/buildname
+    uses: asraa/slsa-on-github/.github/workflows/slsa-builder-go.yml@feat/buildname
     with:
       go-version: 1.17
       #TODO: make this a json/yaml object object

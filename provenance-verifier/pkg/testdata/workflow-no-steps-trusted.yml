@@ -8,10 +8,6 @@ jobs:
   args:
     outputs:
       ldflags: ${{ steps.ldflags.outputs.value }}
-    steps:
-      - id: ldflags
-        run: |
-          echo "::set-output name=value::-X main.gitVersion=v1.2.3 -X main.gitSomething=somthg"
 
   build:
     permissions:
@@ -29,11 +25,4 @@ jobs:
       packages: write
       contents: read
     needs: build
-    steps:
-      - uses: 'actions/download-artifact@v2'
-        with:
-          name: ${{ needs.build.outputs.go-binary-name }}
-      - run: |
-          echo name is ${{ needs.build.outputs.go-binary-name }}
-          chmod a+x ./${{ needs.build.outputs.go-binary-name }}
-          ./${{ needs.build.outputs.go-binary-name }}
+   
