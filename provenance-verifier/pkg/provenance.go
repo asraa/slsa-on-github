@@ -34,11 +34,8 @@ import (
 )
 
 const (
-	defaultFulcioAddr   = "https://fulcio.sigstore.dev"
-	defaultOIDCIssuer   = "https://oauth2.sigstore.dev/auth"
-	defaultOIDCClientID = "sigstore"
-	defaultRekorAddr    = "https://rekor.sigstore.dev"
-	certOidcIssuer      = "https://token.actions.githubusercontent.com"
+	defaultRekorAddr = "https://rekor.sigstore.dev"
+	certOidcIssuer   = "https://token.actions.githubusercontent.com"
 )
 
 var (
@@ -248,24 +245,26 @@ func getExtension(cert *x509.Certificate, oid string) string {
 
 // GetWorkflowFromCertificate gets the workflow content from the Fulcio authenticated content.
 func GetWorkflowFromCertificate(cert *x509.Certificate) (*github.RepositoryContent, error) {
-	repository := getExtension(cert, "1.3.6.1.4.1.57264.1.5")
-	sha := getExtension(cert, "1.3.6.1.4.1.57264.1.2")
-	workflow := getExtension(cert, "1.3.6.1.4.1.57264.1.4")
-
-	if repository == "" || sha == "" || workflow == "" {
-		return nil, errors.New("missing extension information from certificate")
+	if len(cert.URIs) == 0 {
+		return nil, errors.New("missing URI information from certificate")
 	}
 
-	pathParts := strings.SplitN(repository, "/", 3)
-	if len(pathParts) != 2 {
-		return nil, errors.New("malformed repository")
+	// cert URI path is /org/repo/path/to/workflow@ref
+	pathParts := strings.SplitN(cert.URIs[0].Path, "/", 4)
+	if len(pathParts) < 3 {
+		return nil, errors.New("malformed URI for workflow")
 	}
-	org := pathParts[0]
-	repo := pathParts[1]
+	org := pathParts[1]
+	repo := pathParts[2]
+
+	filecontent := strings.SplitN(pathParts[3], "@", 2)
+	if len(filecontent) < 2 {
+		return nil, errors.New("malformed filepath and ref for workflow content")
+	}
 
 	// Checkout the workflow path at the commit hash from the cert.
 	ctx := context.Background()
 	client := github.NewClient(nil)
-	workflowContent, _, _, err := client.Repositories.GetContents(ctx, org, repo, workflow, &github.RepositoryContentGetOptions{Ref: sha})
+	workflowContent, _, _, err := client.Repositories.GetContents(ctx, org, repo, filecontent[0], &github.RepositoryContentGetOptions{Ref: filecontent[1]})
 	return workflowContent, err
 }

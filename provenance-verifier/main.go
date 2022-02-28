@@ -5,7 +5,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/asraa/slsa-on-github/provenance-verifier/pkg"
 	"github.com/sigstore/cosign/cmd/cosign/cli/rekor"
@@ -51,7 +50,6 @@ func verify(ctx context.Context, provenancePath string, binaryPath string) error
 	if err != nil {
 		return err
 	}
-	fmt.Printf("got uuids %s\n", strings.Join(uuids, ", "))
 
 	// Verify the provenance and return the signing certificate.
 	cert, err := pkg.FindSigningCertificate(ctx, uuids, *env, rClient)
@@ -92,5 +90,5 @@ func main() {
 		os.Exit(1)
 	}
 
-	fmt.Printf("successfully verified SLSA provenance")
+	fmt.Println("successfully verified SLSA provenance")
 }
