@@ -4,12 +4,16 @@ permissions:
   contents: read
 
 env:
+  # Project.
   RELEASER_CONFIG: .slsa-goreleaser.yml
   GENERATED_BINARY_NAME: compiled-binary
-  BUILDER_BINARY: builder
+  # Provenance generation.
   PROVENANCE_BINARY: provenance
-  PROVENANCE_DIR: slsa-provenance # Provenance generator.
-  BUILDER_DIR: build-go
+  PROVENANCE_DIR: slsa-provenance
+  # Builder
+  BUILDER_BINARY: builder
+  BUILDER_DIR: builder
+  # This repo.
   BUILDER_REPOSITORY: asraa/slsa-on-github
   BUILDER_REF: main
 
