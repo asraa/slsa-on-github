@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	defaultFulcioAddr   = "https://fulcio.sigstore.dev"
+	defaultFulcioAddr   = "https://v1.fulcio.sigstore.dev"
 	defaultOIDCIssuer   = "https://oauth2.sigstore.dev/auth"
 	defaultOIDCClientID = "sigstore"
 	defaultRekorAddr    = "https://rekor.sigstore.dev"
