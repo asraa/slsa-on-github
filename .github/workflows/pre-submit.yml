@@ -4,11 +4,7 @@ on: [pull_request, workflow_dispatch]
 permissions: read-all
 
 env:
-<<<<<<< HEAD
   BUILDER_DIR: builder
-=======
-  BUILDER_DIR: build-go
->>>>>>> f870b7a (update ci)
   PROVENANCE_VERIFIER_DIR: provenance-verifier
 
 jobs:

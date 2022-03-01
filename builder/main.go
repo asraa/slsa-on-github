@@ -23,11 +23,6 @@ func check(e error) {
 	}
 }
 
-var (
-	// Boolean to indicate a dry run.
-	dry bool
-)
-
 func main() {
 	// Build command
 	buildCmd := flag.NewFlagSet("build", flag.ExitOnError)
