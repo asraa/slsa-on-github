@@ -12,7 +12,7 @@ env:
   BUILDER_DIR: builder
   # This repo.
   BUILDER_REPOSITORY: asraa/slsa-on-github
-  BUILDER_REF: cleanup-flags
+  BUILDER_REF: main
 
 ###################################################################
 #                                                                 #
