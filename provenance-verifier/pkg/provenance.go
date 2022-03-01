@@ -283,7 +283,7 @@ func VerifyWorkflowIdentity(id *WorkflowIdentity) error {
 		return errors.New("malformed URI for workflow")
 	}
 
-	if !strings.EqualFold(workflowPath[0], trustedReusableWorkflow) {
+	if !strings.EqualFold(strings.Trim(workflowPath[0], "/"), trustedReusableWorkflow) {
 		return errors.New("untrusted reuseable workflow")
 	}
 

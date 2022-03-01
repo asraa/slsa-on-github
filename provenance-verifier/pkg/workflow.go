@@ -30,7 +30,7 @@ var allowedRunners = map[string]bool{
 	"ubuntu-latest": true, "ubuntu-20.04": true, "ubuntu-18.04": true,
 }
 
-var trustedReusableWorkflow = "/asraa/slsa-on-github/.github/workflows/slsa-builder-go.yml"
+var trustedReusableWorkflow = "asraa/slsa-on-github/.github/workflows/slsa-builder-go.yml"
 
 var (
 	permissionIdToken  = "id-token"
