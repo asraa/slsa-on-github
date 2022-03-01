@@ -7,15 +7,12 @@ env:
   # Project.
   RELEASER_CONFIG: .slsa-goreleaser.yml
   GENERATED_BINARY_NAME: compiled-binary
-  # Provenance generation.
-  PROVENANCE_BINARY: provenance
-  PROVENANCE_DIR: slsa-provenance
   # Builder
   BUILDER_BINARY: builder
   BUILDER_DIR: builder
   # This repo.
   BUILDER_REPOSITORY: asraa/slsa-on-github
-  BUILDER_REF: main
+  BUILDER_REF: cleanup-flags
 
 ###################################################################
 #                                                                 #
@@ -65,9 +62,6 @@ jobs:
           cd "${{ env.BUILDER_DIR }}"
           go mod vendor
           cd -
-          cd "${{ env.PROVENANCE_DIR }}"
-          go mod vendor
-          cd -
 
       # TODO(hermeticity) OS-level.
       # - name: Disable hermeticity
@@ -80,7 +74,6 @@ jobs:
         id: builder-gen
         env:
           BUILDER_BINARY: "${{ env.BUILDER_BINARY }}"
-          PROVENANCE_BINARY: "${{ env.PROVENANCE_BINARY }}"
         run: |
             set -euo pipefail
             cd "${{ env.BUILDER_DIR }}"
@@ -90,26 +83,11 @@ jobs:
             echo "::set-output name=go-builder-sha256::$BUILDER_DIGEST"
             echo "hash of $BUILDER_BINARY is $BUILDER_DIGEST"
 
-            cd -
-            cd "${{ env.PROVENANCE_DIR }}"
-            go build -mod=vendor -o "$PROVENANCE_BINARY"
-            PROVENANCE_DIGEST=$(sha256sum "$PROVENANCE_BINARY" | awk '{print $1}')
-            echo "::set-output name=go-prov-sha256::$PROVENANCE_DIGEST"
-            echo "hash of $PROVENANCE_BINARY is $PROVENANCE_DIGEST"
-
       - name: Upload the builder
         uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 # v2.3.1
         with:
           name: "${{ env.BUILDER_BINARY }}"
           path: "${{ env.BUILDER_DIR }}/${{ env.BUILDER_BINARY }}"
-          if-no-files-found: error
-          retention-days: 5
-
-      - name: Upload the provenance binary
-        uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 # v2.3.1
-        with:
-          name: "${{ env.PROVENANCE_BINARY }}"
-          path: "${{ env.PROVENANCE_DIR }}/${{ env.PROVENANCE_BINARY }}"
           if-no-files-found: error
           retention-days: 5
 
@@ -181,8 +159,8 @@ jobs:
           # to compute the actual directory.
           # Note: this outputs information about resolved arguments, etc.
           # the values are trusted because the compiler is not invoked.
-          echo ./"$BUILDER_BINARY" "$CONFIG_FILE" "$UNTRUSTED_ENVS" --dry
-          ./"$BUILDER_BINARY" "$CONFIG_FILE" "$UNTRUSTED_ENVS" --dry
+          echo ./"$BUILDER_BINARY" build "$CONFIG_FILE" "$UNTRUSTED_ENVS" --dry
+          ./"$BUILDER_BINARY" build "$CONFIG_FILE" "$UNTRUSTED_ENVS" --dry
 
   build:
     outputs:
@@ -253,9 +231,9 @@ jobs:
 
           # TODO: pass UNTRUSTED_WORKING_DIR to builder, which will use realpath()
           # to compute the actual directory.
-          echo "./$BUILDER_BINARY" "$CONFIG_FILE" "$UNTRUSTED_ENVS"
+          echo "./$BUILDER_BINARY" build "$CONFIG_FILE" "$UNTRUSTED_ENVS"
           export OUTPUT_BINARY="${{ env.GENERATED_BINARY_NAME }}"
-          ./"$BUILDER_BINARY" "$CONFIG_FILE" "$UNTRUSTED_ENVS" &>/dev/null
+          ./"$BUILDER_BINARY" build "$CONFIG_FILE" "$UNTRUSTED_ENVS" &>/dev/null
 
 
       - name: Compute binary hash
@@ -321,29 +299,28 @@ jobs:
       id-token: write # Needed for keyless.
       contents: read
     steps:
-      - name: Download provenance binary
+      - name: Download builder
         uses: actions/download-artifact@f023be2c48cc18debc3bacd34cb396e0295e2869 # v2.1.0
         with:
-          name: "${{ env.PROVENANCE_BINARY }}"
+          name: "${{ env.BUILDER_BINARY }}"
 
-      - name: Verify provenance
+      - name: Verify builder
         env:
-          PROV_HASH: "${{ needs.builder.outputs.go-prov-sha256 }}"
-          PROVENANCE_BINARY: "${{ env.PROVENANCE_BINARY }}"
+          BUILDER_HASH: "${{ needs.builder.outputs.go-builder-sha256 }}"
+          BUILDER_BINARY: "${{ env.BUILDER_BINARY }}"
         run: |
           set -euo pipefail
-      
-          echo "hash of provenance generator $PROVENANCE_BINARY should be $PROV_HASH"
 
-          COMPUTED_HASH=$(sha256sum "$PROVENANCE_BINARY" | awk '{print $1}')
-          echo "provenance generator hash computed is $COMPUTED_HASH"
+          echo "hash of builder should be $BUILDER_HASH"
+          COMPUTED_HASH=$(sha256sum "$BUILDER_BINARY" | awk '{print $1}')
+          echo "builder hash computed is $COMPUTED_HASH"
 
           # Compare hashes. Explicit exit to be safe.
-          # TODO: remove the provenance generator as well.
-          echo "$PROV_HASH $PROVENANCE_BINARY" | sha256sum --strict --check --status || exit -2
+          # TODO: remove the builder as well.
+          echo "$BUILDER_HASH $BUILDER_BINARY" | sha256sum --strict --check --status || exit -2
     
-          # Make the provenance generator executable.
-          chmod a+x "$PROVENANCE_BINARY"
+          # Make the builder executable.
+          chmod a+x "$BUILDER_BINARY"
 
       - name: Create and sign provenance
         id: sign-prov
@@ -351,16 +328,16 @@ jobs:
         env:
           UNTRUSTED_BINARY_NAME: "${{ needs.build-dry.outputs.go-binary-name }}"
           UNTRUSTED_BINARY_HASH: "${{ needs.build.outputs.go-binary-sha256 }}"
-          PROVENANCE_BINARY: "${{ env.PROVENANCE_BINARY }}"
+          BUILDER_BINARY: "${{ env.BUILDER_BINARY }}"
           GITHUB_CONTEXT: "${{ toJSON(github) }}"
         run: |
           set -euo pipefail
 
-          echo "provenance generator is $PROVENANCE_BINARY"
+          echo "provenance generator is $BUILDER_BINARY"
 
           # Create and sign provenance
           # This sets signed-provenance-name to the name of the signed DSSE envelope.
-          DIGEST="$UNTRUSTED_BINARY_HASH" ./"$PROVENANCE_BINARY"
+          ./"$BUILDER_BINARY" provenance --binary-name "$UNTRUSTED_BINARY_NAME" --digest "$UNTRUSTED_BINARY_HASH"
 
       - name: Upload the signed provenance
         uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 # v2.3.1
