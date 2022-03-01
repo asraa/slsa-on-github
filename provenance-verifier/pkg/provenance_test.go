@@ -38,37 +38,43 @@ func (m *MockIndexClient) SetTransport(transport runtime.ClientTransport) {
 func TestGetRekorEntries(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		name     string
-		path     string
-		res      searchResult
-		expected error
+		name         string
+		path         string
+		artifactHash string
+		res          searchResult
+		expected     error
 	}{
 		{
-			name:     "invalid dsse: not SLSA predicate",
-			path:     "./testdata/dsse-not-slsa.intoto",
-			expected: errorInvalidDssePayload,
+			name:         "invalid dsse: not SLSA predicate",
+			path:         "./testdata/dsse-not-slsa.intoto",
+			artifactHash: "0ae7e4fa71686538440012ee36a2634dbaa19df2dd16a466f52411fb348bbc4e",
+			expected:     errorInvalidDssePayload,
 		},
 		{
-			name:     "invalid dsse: nil subject",
-			path:     "./testdata/dsse-no-subject.intoto",
-			expected: errorInvalidDssePayload,
+			name:         "invalid dsse: nil subject",
+			path:         "./testdata/dsse-no-subject.intoto",
+			artifactHash: "0ae7e4fa71686538440012ee36a2634dbaa19df2dd16a466f52411fb348bbc4e",
+			expected:     errorInvalidDssePayload,
 		},
 		{
-			name:     "invalid dsse: no sha256 subject digest",
-			path:     "./testdata/dsse-no-subject-hash.intoto",
-			expected: errorInvalidDssePayload,
+			name:         "invalid dsse: no sha256 subject digest",
+			path:         "./testdata/dsse-no-subject-hash.intoto",
+			artifactHash: "0ae7e4fa71686538440012ee36a2634dbaa19df2dd16a466f52411fb348bbc4e",
+			expected:     errorInvalidDssePayload,
 		},
 		{
-			name: "rekor search result error",
-			path: "./testdata/dsse-valid.intoto",
+			name:         "rekor search result error",
+			path:         "./testdata/dsse-valid.intoto",
+			artifactHash: "0ae7e4fa71686538440012ee36a2634dbaa19df2dd16a466f52411fb348bbc4e",
 			res: searchResult{
 				err: index.NewSearchIndexDefault(500),
 			},
 			expected: errorRekorSearch,
 		},
 		{
-			name: "no rekor entries found",
-			path: "./testdata/dsse-valid.intoto",
+			name:         "no rekor entries found",
+			path:         "./testdata/dsse-valid.intoto",
+			artifactHash: "0ae7e4fa71686538440012ee36a2634dbaa19df2dd16a466f52411fb348bbc4e",
 			res: searchResult{
 				err: nil,
 				resp: &index.SearchIndexOK{
@@ -78,8 +84,21 @@ func TestGetRekorEntries(t *testing.T) {
 			expected: errorRekorSearch,
 		},
 		{
-			name: "valid rekor entries found",
-			path: "./testdata/dsse-valid.intoto",
+			name:         "mismatched artifact hash with env",
+			path:         "./testdata/dsse-valid.intoto",
+			artifactHash: "1ae7e4fa71686538440012ee36a2634dbaa19df2dd16a466f52411fb348bbc4e",
+			res: searchResult{
+				err: nil,
+				resp: &index.SearchIndexOK{
+					Payload: []string{"39d5109436c43dad92897d50f3b271aa456382875a922b28fedef9038b8f683a"},
+				},
+			},
+			expected: errorMismatchHash,
+		},
+		{
+			name:         "valid rekor entries found",
+			path:         "./testdata/dsse-valid.intoto",
+			artifactHash: "0ae7e4fa71686538440012ee36a2634dbaa19df2dd16a466f52411fb348bbc4e",
 			res: searchResult{
 				err: nil,
 				resp: &index.SearchIndexOK{
@@ -106,7 +125,7 @@ func TestGetRekorEntries(t *testing.T) {
 			var mClient client.Rekor
 			mClient.Index = &MockIndexClient{result: tt.res}
 
-			_, err = GetRekorEntries(&mClient, *env)
+			_, err = GetRekorEntries(&mClient, *env, tt.artifactHash)
 			if !errCmp(err, tt.expected) {
 				t.Errorf(cmp.Diff(err, tt.expected))
 			}

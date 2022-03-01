@@ -40,6 +40,7 @@ const (
 var (
 	errorInvalidDssePayload = errors.New("invalid DSSE envelope payload")
 	errorRekorSearch        = errors.New("error searching rekor entries")
+	errorMismatchHash       = errors.New("binary artifact hash does not match provenance subject")
 )
 
 func EnvelopeFromBytes(payload []byte) (env *dsselib.Envelope, err error) {
@@ -78,7 +79,7 @@ func GetRekorEntries(rClient *client.Rekor, env dsselib.Envelope, artifactHash s
 	}
 
 	if !strings.EqualFold(hash, artifactHash) {
-		return nil, fmt.Errorf("binary artifact hash does not match provenance subject, expected %s, got %s", artifactHash, hash)
+		return nil, errorMismatchHash
 	}
 
 	// Use search index to find rekor entry UUIDs that match Subject Digest.
