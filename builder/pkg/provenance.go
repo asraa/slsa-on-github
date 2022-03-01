@@ -1,4 +1,18 @@
-package main
+// Copyright 2021 The slsa-on-github Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package pkg
 
 import (
 	"bytes"
@@ -7,15 +21,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
-	"log"
-	"os"
 	"strings"
 
-	cjson "github.com/docker/go/canonical/json"
 	intoto "github.com/in-toto/in-toto-golang/in_toto"
 	slsa "github.com/in-toto/in-toto-golang/in_toto/slsa_provenance/v0.2"
-	dsselib "github.com/secure-systems-lab/go-securesystemslib/dsse"
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio"
 	"github.com/sigstore/cosign/cmd/cosign/cli/rekor"
 	"github.com/sigstore/cosign/pkg/cosign"
@@ -42,46 +51,26 @@ type GitHubContext struct {
 	RunNumber  string `json:"run_number"`
 }
 
-func main() {
-	// Generate the provenance
-	// TODO: Refactor with flags library.
-	digest, ok := os.LookupEnv("DIGEST")
-	if !ok {
-		panic(errors.New("Environment variable DIGEST not present"))
-	}
-
-	binary, ok := os.LookupEnv("UNTRUSTED_BINARY_NAME")
-	if !ok {
-		panic(errors.New("Environment variable UNTRUSTED_BINARY_NAME not present"))
-	}
-
-	// This binary filename is verified in the builder's dry-run step,
-	// but we verify it only contains alphanumeric characters again as well.
-	if err := verifyProvenanceName(binary); err != nil {
-		panic(err)
-	}
-
-	githubContext, ok := os.LookupEnv("GITHUB_CONTEXT")
-	if !ok {
-		panic(errors.New("Environment variable GITHUB_CONTEXT not present"))
-	}
-
+// GenerateProvenance translates github context into a SLSA provenance
+// attestation.
+// Spec: https://slsa.dev/provenance/v0.1
+func GenerateProvenance(name, digest, githubContext string) ([]byte, error) {
 	gh := &GitHubContext{}
 	if err := json.Unmarshal([]byte(githubContext), gh); err != nil {
-		panic(err)
+		return nil, err
 	}
+	gh.Token = ""
 
 	if _, err := hex.DecodeString(digest); err != nil || len(digest) != 64 {
-		log.Fatal(fmt.Errorf("sha256 digest is not valid: %s", digest))
+		return nil, fmt.Errorf("sha256 digest is not valid: %s", digest)
 	}
-
 	att := intoto.ProvenanceStatement{
 		StatementHeader: intoto.StatementHeader{
 			Type:          intoto.StatementInTotoV01,
 			PredicateType: slsa.PredicateSLSAProvenance,
 			Subject: []intoto.Subject{
 				{
-					Name: binary,
+					Name: name,
 					Digest: slsa.DigestSet{
 						"sha256": digest,
 					},
@@ -120,61 +109,47 @@ func main() {
 		},
 	}
 
-	attBytes, err := cjson.MarshalCanonical(att)
+	attBytes, err := json.Marshal(att)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	// Get Fulcio signer
 	ctx := context.Background()
 	if !providers.Enabled(ctx) {
-		panic(fmt.Errorf("no auth provider for fulcio is enabled"))
+		return nil, fmt.Errorf("no auth provider for fulcio is enabled")
 	}
 
 	fClient, err := fulcio.NewClient(defaultFulcioAddr)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	tok, err := providers.Provide(ctx, defaultOIDCClientID)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	k, err := fulcio.NewSigner(ctx, tok, defaultOIDCIssuer, defaultOIDCClientID, "", fClient)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	wrappedSigner := dsse.WrapSigner(k, intoto.PayloadType)
 
 	signedAtt, err := wrappedSigner.SignMessage(bytes.NewReader(attBytes))
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	// Upload to tlog
 	rekorClient, err := rekor.NewClient(defaultRekorAddr)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	// TODO: Is it a bug that we need []byte(string(k.Cert)) or else we hit invalid PEM?
 	if _, err := cosign.TLogUploadInTotoAttestation(ctx, rekorClient, signedAtt, []byte(string(k.Cert))); err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	envelope := &dsselib.Envelope{}
-	if err = json.Unmarshal(signedAtt, envelope); err != nil {
-		panic(err)
-	}
-
-	payload, err := json.MarshalIndent(envelope, "", "\t")
-	if err != nil {
-		panic(err)
-	}
-
-	filename := fmt.Sprintf("%s.intoto.sig", binary)
-	if err := ioutil.WriteFile(filename, payload, 0600); err != nil {
-		panic(err)
-	}
-	fmt.Printf("::set-output name=signed-provenance-name::%s\n", filename)
+	return signedAtt, nil
 }
 
 func verifyProvenanceName(name string) error {

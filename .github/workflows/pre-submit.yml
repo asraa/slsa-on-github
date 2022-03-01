@@ -5,7 +5,6 @@ permissions: read-all
 
 env:
   BUILDER_DIR: builder
-  PROVENANCE_GENERATOR_DIR: slsa-provenance
   PROVENANCE_VERIFIER_DIR: provenance-verifier
 
 jobs:
@@ -31,20 +30,6 @@ jobs:
           # Tests
           go test -mod=vendor -v ./...
           cd -
-          
-          # TODO
-
-      - name: Build for slsa-provenance
-        run: |
-          set -euo pipefail
-          
-          cd "$PROVENANCE_GENERATOR_DIR"
-          go mod vendor
-          # Build
-          go build -mod=vendor
-          cd -
-          
-          # TODO: Add tests
       
       - name: Run tests for provenance verifier
         run: |
