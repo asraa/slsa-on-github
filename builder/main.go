@@ -8,7 +8,7 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/asraa/slsa-on-github/build-go/pkg"
+	"github.com/asraa/slsa-on-github/builder/pkg"
 )
 
 func usage(p string) {
