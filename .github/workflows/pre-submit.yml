@@ -4,7 +4,11 @@ on: [pull_request, workflow_dispatch]
 permissions: read-all
 
 env:
+<<<<<<< HEAD
   BUILDER_DIR: builder
+=======
+  BUILDER_DIR: build-go
+>>>>>>> f870b7a (update ci)
   PROVENANCE_VERIFIER_DIR: provenance-verifier
 
 jobs:
@@ -30,8 +34,6 @@ jobs:
           # Tests
           go test -mod=vendor -v ./...
           cd -
-          
-          # TODO
       
       - name: Run tests for provenance verifier
         run: |
