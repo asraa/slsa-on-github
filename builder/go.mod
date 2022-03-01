@@ -1,4 +1,4 @@
-module github.com/asraa/slsa-on-github/build-go
+module github.com/asraa/slsa-on-github/builder
 
 go 1.17
 
