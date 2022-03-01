@@ -8,6 +8,8 @@ env:
   GENERATED_BINARY_NAME: compiled-binary
   BUILDER_BINARY: builder
   PROVENANCE_BINARY: provenance
+  PROVENANCE_DIR: slsa-provenance # Provenance generator.
+  BUILDER_DIR: build-go
   BUILDER_REPOSITORY: asraa/slsa-on-github
   BUILDER_REF: main
 
@@ -56,10 +58,10 @@ jobs:
         run: |
           set -euo pipefail
           #TODO(reproducible)
-          cd build-go
+          cd "${{ env.BUILDER_DIR }}"
           go mod vendor
           cd -
-          cd slsa-provenance
+          cd "${{ env.PROVENANCE_DIR }}"
           go mod vendor
           cd -
 
@@ -77,7 +79,7 @@ jobs:
           PROVENANCE_BINARY: "${{ env.PROVENANCE_BINARY }}"
         run: |
             set -euo pipefail
-            cd build-go
+            cd "${{ env.BUILDER_DIR }}"
             # https://go.dev/ref/mod#build-commands.
             go build -mod=vendor -o "$BUILDER_BINARY"
             BUILDER_DIGEST=$(sha256sum "$BUILDER_BINARY" | awk '{print $1}')
@@ -85,7 +87,7 @@ jobs:
             echo "hash of $BUILDER_BINARY is $BUILDER_DIGEST"
 
             cd -
-            cd slsa-provenance
+            cd "${{ env.PROVENANCE_DIR }}"
             go build -mod=vendor -o "$PROVENANCE_BINARY"
             PROVENANCE_DIGEST=$(sha256sum "$PROVENANCE_BINARY" | awk '{print $1}')
             echo "::set-output name=go-prov-sha256::$PROVENANCE_DIGEST"
@@ -95,7 +97,7 @@ jobs:
         uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 # v2.3.1
         with:
           name: "${{ env.BUILDER_BINARY }}"
-          path: "build-go/${{ env.BUILDER_BINARY }}"
+          path: "${{ env.BUILDER_DIR }}/${{ env.BUILDER_BINARY }}"
           if-no-files-found: error
           retention-days: 5
 
@@ -103,7 +105,7 @@ jobs:
         uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 # v2.3.1
         with:
           name: "${{ env.PROVENANCE_BINARY }}"
-          path: "slsa-provenance/${{ env.PROVENANCE_BINARY }}"
+          path: "${{ env.PROVENANCE_DIR }}/${{ env.PROVENANCE_BINARY }}"
           if-no-files-found: error
           retention-days: 5
 
