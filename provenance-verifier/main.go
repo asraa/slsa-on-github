@@ -2,9 +2,13 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
+	"log"
 	"os"
 
 	"github.com/asraa/slsa-on-github/provenance-verifier/pkg"
@@ -30,7 +34,7 @@ var (
 	defaultRekorAddr = "https://rekor.sigstore.dev"
 )
 
-func verify(ctx context.Context, provenancePath string, binaryPath string) error {
+func verify(ctx context.Context, provenancePath string, artifactHash string) error {
 	provenance, err := os.ReadFile(provenancePath)
 	if err != nil {
 		return fmt.Errorf("os.ReadFile: %w", err)
@@ -46,8 +50,8 @@ func verify(ctx context.Context, provenancePath string, binaryPath string) error
 		return err
 	}
 
-	// Get Rekor entries corresponding to the Subject digest in the provenance.
-	uuids, err := pkg.GetRekorEntries(rClient, *env)
+	// Get Rekor entries corresponding to the binary artifact (matching Subject digest) in the provenance.
+	uuids, err := pkg.GetRekorEntries(rClient, *env, artifactHash)
 	if err != nil {
 		return err
 	}
@@ -87,8 +91,19 @@ func main() {
 		os.Exit(1)
 	}
 
+	f, err := os.Open(binaryPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer f.Close()
+
+	h := sha256.New()
+	if _, err := io.Copy(h, f); err != nil {
+		log.Fatal(err)
+	}
+
 	ctx := context.Background()
-	if err := verify(ctx, provenancePath, binaryPath); err != nil {
+	if err := verify(ctx, provenancePath, hex.EncodeToString(h.Sum(nil))); err != nil {
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}

@@ -70,11 +70,15 @@ func getSha256Digest(env dsselib.Envelope) (string, error) {
 }
 
 // GetRekorEntries finds all entry UUIDs by the digest of the artifact binary.
-func GetRekorEntries(rClient *client.Rekor, env dsselib.Envelope) ([]string, error) {
+func GetRekorEntries(rClient *client.Rekor, env dsselib.Envelope, artifactHash string) ([]string, error) {
 	// Get Subject Digest from the provenance statement.
 	hash, err := getSha256Digest(env)
 	if err != nil {
 		return nil, err
+	}
+
+	if !strings.EqualFold(hash, artifactHash) {
+		return nil, fmt.Errorf("binary artifact hash does not match provenance subject, expected %s, got %s", artifactHash, hash)
 	}
 
 	// Use search index to find rekor entry UUIDs that match Subject Digest.
