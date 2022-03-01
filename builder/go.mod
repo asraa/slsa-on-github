@@ -9,7 +9,7 @@ require (
 )
 
 require (
-	github.com/docker/go v1.5.1-1
+	github.com/asraa/slsa-on-github/build-go v0.0.0-20220301160721-a71e4e88158f
 	github.com/sigstore/sigstore v1.1.1-0.20220130134424-bae9b66b8442
 )
 
@@ -205,7 +205,7 @@ require (
 
 require (
 	github.com/google/go-querystring v1.1.0 // indirect
-	github.com/secure-systems-lab/go-securesystemslib v0.3.0
+	github.com/secure-systems-lab/go-securesystemslib v0.3.0 // indirect
 	github.com/shibumi/go-pathspec v1.3.0 // indirect
 	github.com/sigstore/cosign v1.5.2
 	golang.org/x/crypto v0.0.0-20220112180741-5e0467b6c7ce // indirect
