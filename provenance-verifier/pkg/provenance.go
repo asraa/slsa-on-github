@@ -14,7 +14,6 @@ import (
 
 	cjson "github.com/docker/go/canonical/json"
 	"github.com/go-openapi/runtime"
-	"github.com/google/go-github/v39/github"
 	"github.com/google/trillian/merkle/logverifier"
 	"github.com/google/trillian/merkle/rfc6962"
 	intoto "github.com/in-toto/in-toto-golang/in_toto"
@@ -243,28 +242,48 @@ func getExtension(cert *x509.Certificate, oid string) string {
 	return ""
 }
 
-// GetWorkflowFromCertificate gets the workflow content from the Fulcio authenticated content.
-func GetWorkflowFromCertificate(cert *x509.Certificate) (*github.RepositoryContent, error) {
+type WorkflowIdentity struct {
+	// The caller repository
+	CallerRepository string `json:"caller"`
+	// The commit SHA where the workflow was triggered
+	CallerHash string `json:"commit"`
+	// Current workflow (reuseable workflow) ref
+	JobWobWorkflowRef string `json:"job_workflow_ref"`
+	// Trigger
+	Trigger string `json:"trigger"`
+	// Issuer
+	Issuer string `json:"issuer"`
+}
+
+// GetWorkflowFromCertificate gets the workflow identity from the Fulcio authenticated content.
+func GetWorkflowInfoFromCertificate(cert *x509.Certificate) (*WorkflowIdentity, error) {
 	if len(cert.URIs) == 0 {
 		return nil, errors.New("missing URI information from certificate")
 	}
 
+	return &WorkflowIdentity{
+		CallerRepository:  getExtension(cert, "1.3.6.1.4.1.57264.1.5"),
+		Issuer:            getExtension(cert, "1.3.6.1.4.1.57264.1.1"),
+		Trigger:           getExtension(cert, "1.3.6.1.4.1.57264.1.2"),
+		CallerHash:        getExtension(cert, "1.3.6.1.4.1.57264.1.3"),
+		JobWobWorkflowRef: cert.URIs[0].Path,
+	}, nil
+}
+
+// VerifyWorkflowIdentity verifies the signing certificate information
+func VerifyWorkflowIdentity(id *WorkflowIdentity) error {
 	// cert URI path is /org/repo/path/to/workflow@ref
-	pathParts := strings.SplitN(cert.URIs[0].Path, "/", 4)
-	if len(pathParts) < 3 {
-		return nil, errors.New("malformed URI for workflow")
-	}
-	org := pathParts[1]
-	repo := pathParts[2]
-
-	filecontent := strings.SplitN(pathParts[3], "@", 2)
-	if len(filecontent) < 2 {
-		return nil, errors.New("malformed filepath and ref for workflow content")
+	workflowPath := strings.SplitN(id.JobWobWorkflowRef, "@", 2)
+	if len(workflowPath) < 2 {
+		return errors.New("malformed URI for workflow")
 	}
 
-	// Checkout the workflow path at the commit hash from the cert.
-	ctx := context.Background()
-	client := github.NewClient(nil)
-	workflowContent, _, _, err := client.Repositories.GetContents(ctx, org, repo, filecontent[0], &github.RepositoryContentGetOptions{Ref: filecontent[1]})
-	return workflowContent, err
+	if !strings.EqualFold(workflowPath[0], trustedReusableWorkflow) {
+		return errors.New("untrusted reuseable workflow")
+	}
+
+	if !strings.EqualFold(id.Issuer, certOidcIssuer) {
+		return errors.New("untrusted token issuer")
+	}
+	return nil
 }

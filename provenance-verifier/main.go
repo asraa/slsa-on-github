@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
@@ -57,24 +58,26 @@ func verify(ctx context.Context, provenancePath string, binaryPath string) error
 		return err
 	}
 
-	// Get the workflow contents given the certificate information.
-	workflow, err := pkg.GetWorkflowFromCertificate(cert)
+	// Get the workflow info given the certificate information.
+	workflowInfo, err := pkg.GetWorkflowInfoFromCertificate(cert)
 	if err != nil {
 		return err
 	}
 
-	content, err := workflow.GetContent()
+	if err := pkg.VerifyWorkflowIdentity(workflowInfo); err != nil {
+		return err
+	}
+
+	b, err := json.MarshalIndent(workflowInfo, "", "\t")
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("got workflow content %s", content)
-	// TODO: Add workflow verification.
+	fmt.Printf("verified SLSA provenance produced at \n %s\n", b)
 	return nil
 }
 
 func main() {
-	fmt.Println("verifier")
 	flag.StringVar(&provenancePath, "provenance", "", "path to a provenance file")
 	flag.StringVar(&binaryPath, "binary", "", "path to a binary to verify")
 	flag.Parse()
