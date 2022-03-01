@@ -159,8 +159,8 @@ jobs:
           # to compute the actual directory.
           # Note: this outputs information about resolved arguments, etc.
           # the values are trusted because the compiler is not invoked.
-          echo ./"$BUILDER_BINARY" build "$CONFIG_FILE" "$UNTRUSTED_ENVS" --dry
-          ./"$BUILDER_BINARY" build "$CONFIG_FILE" "$UNTRUSTED_ENVS" --dry
+          echo ./"$BUILDER_BINARY" build --dry "$CONFIG_FILE" "$UNTRUSTED_ENVS"
+          ./"$BUILDER_BINARY" build --dry "$CONFIG_FILE" "$UNTRUSTED_ENVS"
 
   build:
     outputs:
