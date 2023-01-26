@@ -63,7 +63,7 @@ runs:
         SLSA_OUTPUTS_ARTIFACTS_FILE: ${{ inputs.slsa-layout-file }}
       shell: bash
       run: |
-        path=$(cat $GORELEASER_OUTPUTS | jq -r .[0].path)
+        path=$(echo $GORELEASER_OUTPUTS | jq -r .[0].path)
         base=$(basename $path)
         hash=$(sha256sum $path | awk '{print $1}')
         echo 
