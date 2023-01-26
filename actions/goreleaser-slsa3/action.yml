@@ -59,10 +59,11 @@ runs:
     - name: "run"
       id: generate-outputs
       env:
+        GORELEASER_OUTPUTS: ${{ steps.goreleaser.outputs.artifacts }}
         SLSA_OUTPUTS_ARTIFACTS_FILE: ${{ inputs.slsa-layout-file }}
       shell: bash
       run: |
-        path=$(cat outputs.json | jq -r .[0].path)
+        path=$(cat $GORELEASER_OUTPUTS | jq -r .[0].path)
         base=$(basename $path)
         hash=$(sha256sum $path | awk '{print $1}')
         echo 
