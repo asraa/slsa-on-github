@@ -1,4 +1,3 @@
 # slsa-on-github
-Non falsifiable SLSA provenance using GitHub workflows
+Non falsifiable SLSA 3 provenance using Goreleaser
 
-Example usage: https://github.com/laurentsimon/slsa-on-github-test/blob/main/.github/workflows/slsa-reusable.yaml

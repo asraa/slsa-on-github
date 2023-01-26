@@ -1,0 +1,92 @@
+# Copyright 2022 SLSA Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: Goreleaser secure builder
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+on:
+  workflow_call:
+    inputs:
+      release-tag:
+        description: "tag"
+        required: false
+        type: string
+        default: "v100"
+
+    outputs:
+      # Outputs from the Action.
+      artifacts:
+        description: "Build result artifacts"
+        value: ${{ fromJson(jobs.slsa-run.outputs.build-artifacts-outputs).artifacts }}
+      metadata:
+        description: "Build result metadata"
+        value: ${{ fromJson(jobs.slsa-run.outputs.build-artifacts-outputs).metadata }}
+
+      # Outputs from the BYOB framework.
+      attestations-download-name:
+        description: "Name of the attestation for download"
+        value: ${{ jobs.slsa-run.outputs.attestations-download-name }}
+
+jobs:
+  slsa-setup:
+    permissions:
+      id-token: write # For token creation.
+    outputs:
+      slsa-token: ${{ steps.generate.outputs.slsa-token }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate the token
+        id: generate
+        uses: laurentsimon/slsa-delegator/actions/setup-token@main
+        with:
+          slsa-workflow-recipient: "delegator_generic_slsa3.yml"
+          slsa-private-repository: true
+          slsa-runner-label: "ubuntu-latest"
+          slsa-build-action-path: "./actions/goreleaser-slsa3"
+          slsa-workflow-inputs: ${{ toJson(inputs) }}
+
+  slsa-run:
+    needs: [slsa-setup]
+    permissions:
+      id-token: write # For signing.
+      contents: write # For asset uploads.
+      actions: read   # For the entrypoint.
+      packages: write
+    uses: laurentsimon/slsa-delegator/.github/workflows/delegator_generic_slsa3.yml@main
+    with:
+      slsa-token: ${{ needs.slsa-setup.outputs.slsa-token }}
+
+  slsa-publish:
+    needs: [slsa-run]
+    permissions:
+      contents: write # For asset uploads. Optional
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify and publish
+        env:
+          # This is BYOB specific.
+          SLSA_ATTESTATION_DOWNLOAD_NAME: ${{ needs.slsa-run.outputs.attestations-download-name }}
+          # This is Action specific.
+          ACTION_ARTIFACTS: ${{ needs.slsa-run.outputs.build-artifacts-outputs }}
+        run: |
+          echo "download from $SLSA_ATTESTATION_DOWNLOAD_NAME"
+          echo "artifacts $ACTION_ARTIFACTS"
+          # Download artifacts and provenance
+          # Verify thru slsa-verifier
